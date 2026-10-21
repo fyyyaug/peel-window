@@ -13,6 +13,8 @@ public final class PeelDemoView: NSView {
 
     private var gestureMachine = PeelGestureMachine()
     private var settlementTimer: Timer?
+    private var dragPeakProgress = 0.0
+    private var lastDragPeakProgress = 0.0
 
     public override init(frame frameRect: NSRect) {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -77,20 +79,33 @@ public final class PeelDemoView: NSView {
         case .began:
             // The synthetic card occupies x: -0.88...0.88 and y: -0.72...0.72
             // in Metal clip space, so its visible top-right corner is inset.
+            let translation = recognizer.translation(in: self)
+            let startPoint = CGPoint(
+                x: point.x - translation.x,
+                y: point.y - translation.y
+            )
             let cornerPoint = CGPoint(
                 x: bounds.width * 0.94,
                 y: bounds.height * 0.86
             )
-            guard hypot(point.x - cornerPoint.x, point.y - cornerPoint.y) <= 110 else {
+            guard hypot(startPoint.x - cornerPoint.x, startPoint.y - cornerPoint.y) <= 110 else {
                 recognizer.isEnabled = false
                 recognizer.isEnabled = true
                 return
             }
             stopSettlementTimer()
-            gestureMachine.begin(corner: .topRight, at: peelPoint, timestamp: timestamp)
+            gestureMachine.begin(
+                corner: .topRight,
+                at: PeelPoint(x: startPoint.x, y: startPoint.y),
+                timestamp: timestamp
+            )
+            gestureMachine.update(to: peelPoint, timestamp: timestamp)
+            dragPeakProgress = gestureMachine.pose.progress
         case .changed:
             gestureMachine.update(to: peelPoint, timestamp: timestamp)
+            dragPeakProgress = max(dragPeakProgress, gestureMachine.pose.progress)
         case .ended:
+            lastDragPeakProgress = dragPeakProgress
             gestureMachine.end()
             startSettlementTimerIfNeeded()
         case .cancelled, .failed:
@@ -135,9 +150,10 @@ public final class PeelDemoView: NSView {
         renderer.pose = gestureMachine.pose
         metalView.draw()
         statusLabel.stringValue = String(
-            format: "phase: %@   peel: %.2f   frame: %.1f ms",
+            format: "phase: %@   peel: %.2f   last drag: %.2f   frame: %.1f ms",
             String(describing: gestureMachine.phase),
             gestureMachine.pose.progress,
+            lastDragPeakProgress,
             renderer.lastFrameDuration * 1_000
         )
     }

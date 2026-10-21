@@ -97,7 +97,6 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     private let pipelineState: MTLRenderPipelineState
     private let indexBuffer: MTLBuffer
     private var vertexBuffer: MTLBuffer?
-    private var previousFrameTimestamp: CFTimeInterval?
 
     public init?(view: MTKView, mesh: PeelMesh = .init()) {
         guard
@@ -147,11 +146,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     public func draw(in view: MTKView) {
-        let now = CACurrentMediaTime()
-        if let previousFrameTimestamp {
-            lastFrameDuration = now - previousFrameTimestamp
-        }
-        previousFrameTimestamp = now
+        let frameStart = CACurrentMediaTime()
 
         guard
             let descriptor = view.currentRenderPassDescriptor,
@@ -175,6 +170,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         encoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
+        lastFrameDuration = CACurrentMediaTime() - frameStart
     }
 
     public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
