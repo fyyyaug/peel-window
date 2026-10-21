@@ -17,7 +17,7 @@ public final class PeelWindowSnapshotter {
     public init() {}
 
     public func capture(_ window: SCWindow) async throws -> CGImage {
-        guard window.isOnScreen, window.frame.width > 0, window.frame.height > 0 else {
+        guard window.frame.width > 0, window.frame.height > 0 else {
             throw PeelCaptureError.windowUnavailable
         }
 

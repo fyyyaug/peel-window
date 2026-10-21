@@ -218,7 +218,6 @@ public final class PeelDemoView: NSView {
         Task { @MainActor in
             defer { captureButton.isEnabled = true }
             do {
-                _ = try await windowCatalog.refresh()
                 guard let frontWindow = windowCatalog.window(withID: frontID) else {
                     throw PeelCaptureError.windowUnavailable
                 }

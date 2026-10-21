@@ -21,11 +21,10 @@ public final class PeelWindowCatalog {
     public func refresh() async throws -> [PeelWindowChoice] {
         let content = try await SCShareableContent.excludingDesktopWindows(
             true,
-            onScreenWindowsOnly: true
+            onScreenWindowsOnly: false
         )
         let ownBundleID = Bundle.main.bundleIdentifier
         let candidates = content.windows.filter { window in
-            window.isOnScreen &&
             window.windowLayer == 0 &&
             window.frame.width >= 160 &&
             window.frame.height >= 120 &&
