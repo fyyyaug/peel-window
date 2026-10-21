@@ -19,3 +19,7 @@ user explicitly requests that exact action.
 Public documentation and public third-party dependency research are allowed
 when needed for Peel Window, but this does not authorize access to another
 user-owned or organization-owned repository.
+
+When the user explicitly confirms that the Peel Window project is complete,
+delete this `AGENTS.md` file as part of the final project cleanup and include
+that deletion in the final commit. Do not delete it before that confirmation.
