@@ -68,8 +68,10 @@ fragment float4 peelSnapshotFragment(
 
 fragment float4 peelUnderlayFragment(
     RasterData input [[stage_in]],
-    texture2d<float> snapshot [[texture(0)]]
+    texture2d<float> snapshot [[texture(0)]],
+    constant float4 &uvMapping [[buffer(0)]]
 ) {
     constexpr sampler imageSampler(filter::linear, address::clamp_to_edge);
-    return snapshot.sample(imageSampler, input.textureCoordinate);
+    float2 coordinates = input.textureCoordinate * uvMapping.xy + uvMapping.zw;
+    return snapshot.sample(imageSampler, coordinates);
 }

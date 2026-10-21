@@ -1,3 +1,4 @@
+import CoreGraphics
 import Testing
 import PeelCore
 @testable import PeelRenderer
@@ -26,4 +27,40 @@ func cornerCurlFalloff() {
     #expect(topRight.position.z > bottomLeft.position.z)
     #expect(topRight.curl > 0.8)
     #expect(bottomLeft.curl == 0)
+}
+
+@Test("Preview preserves landscape and portrait image proportions")
+func previewKeepsAspectRatio() {
+    let view = CGSize(width: 1000, height: 700)
+    for image in [CGSize(width: 1600, height: 900), CGSize(width: 600, height: 1000)] {
+        let layout = PeelPreviewLayout(viewSize: view, imageSize: image)
+        let displayedAspect = (layout.halfWidth * Double(view.width)) /
+            (layout.halfHeight * Double(view.height))
+        let imageAspect = Double(image.width / image.height)
+
+        #expect(abs(displayedAspect - imageAspect) < 0.000_001)
+        #expect(layout.halfWidth <= 0.88)
+        #expect(layout.halfHeight <= 0.72)
+        let corner = layout.topRightCorner(in: view)
+        #expect(corner.x > view.width / 2 && corner.y > view.height / 2)
+    }
+}
+
+@Test("Lower snapshot uses centered cropping instead of stretching")
+func lowerSnapshotAspectFill() {
+    let wider = PeelTextureMapping(
+        sourceSize: CGSize(width: 2000, height: 1000),
+        destinationSize: CGSize(width: 1000, height: 1000)
+    )
+    #expect(wider.scaleX == 0.5)
+    #expect(wider.scaleY == 1)
+    #expect(wider.offsetX == 0.25)
+
+    let taller = PeelTextureMapping(
+        sourceSize: CGSize(width: 1000, height: 2000),
+        destinationSize: CGSize(width: 1000, height: 1000)
+    )
+    #expect(taller.scaleX == 1)
+    #expect(taller.scaleY == 0.5)
+    #expect(taller.offsetY == 0.25)
 }

@@ -38,12 +38,17 @@ permissions, and lifecycle.
 - Local Swift package connected to the app target
 - Synthetic Metal window mesh renders in the app
 - Top-right drag, normalized peel pose, and spring return are implemented
-- Six package tests cover geometry, interaction, and mesh deformation
+- Eleven package tests cover geometry, interaction, mesh deformation,
+  aspect-preserving preview layout, and lower-window selection
 - Return strength can be adjusted in the app and persists across launches
 - ScreenCaptureKit window discovery and still-image capture are wired into the
   app through an explicit Find Windows action
 - The app can display a local sample pair or selected front/underneath window
-  snapshots; the true desktop overlay is a later milestone
+  snapshots without stretching them; the true desktop overlay is a later
+  milestone
+- Real dual-window capture and the peel gesture have been checked on a Mac
+- An opt-in Auto-detect choice can probe the actual window below the curled
+  corner; the desktop overlay and live reveal remain future work
 
 See [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md) and
 [Docs/ROADMAP.md](Docs/ROADMAP.md) for the working plan.

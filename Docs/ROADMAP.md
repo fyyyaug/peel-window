@@ -29,22 +29,28 @@ understandable without explanation.
 - [x] Guide the user through Screen Recording permission.
 - [x] Implement single-frame ScreenCaptureKit capture and Metal textures.
 - [x] Add a local sample pair to verify the reveal without screen access.
-- [ ] Verify capture of selected real windows after permission is granted.
-- [ ] Match the source window aspect and position without distortion.
-- [ ] Handle moved, resized, closed, and protected windows safely.
+- [x] Verify capture of selected real windows after permission is granted.
+- [x] Preserve the selected source window's aspect in the centered preview.
+- [x] Refresh window metadata before capture so moved, resized, or closed
+      selections use current geometry or fail without replacing the preview.
+- [ ] Align the preview to the source window's desktop position (M3).
+- [ ] Detect protected-window captures and explain their limitations.
 
 Exit condition: the synthetic texture can be replaced with a real window image.
 The selected lower image must be hidden while the upper image is flat and become
-visible only in the peeled region. Real screen permission and window selection
-still need an end-to-end run on the user's Mac.
+visible only in the peeled region. Real screen permission, capture, and a user
+drag have now been verified on the user's Mac; desktop alignment and protected
+content handling remain open.
 
 ## M3 — Desktop overlay illusion
 
-- Add the transparent borderless overlay.
-- Route pointer input without trapping the user.
-- Coordinate source-window visibility and overlay teardown.
-- Add cancellation and recovery for focus or permission changes.
-- Identify the actual window below the source window and reveal it only while
+- [x] Add an opt-in stack-order probe for the window directly under the curled
+      corner, with manual lower-window selection still available.
+- [ ] Add the transparent borderless overlay.
+- [ ] Route pointer input without trapping the user.
+- [ ] Coordinate source-window visibility and overlay teardown.
+- [ ] Add cancellation and recovery for focus or permission changes.
+- [ ] Reveal the actual window below the source window only while
   the user is peeling; fully restore the source view on release or cancellation.
 
 Exit condition: the user can peel and release a normal supported window without

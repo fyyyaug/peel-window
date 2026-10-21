@@ -1,10 +1,9 @@
 # Tests
 
-Package tests will mirror the production modules, beginning with deterministic
-interaction and geometry tests in `PeelCoreTests` and `PeelInteractionTests`.
+Run `swift test` with the full Xcode toolchain. The eleven Swift Testing cases
+cover domain geometry, spring interaction, Metal mesh topology, preview aspect
+mapping, and the stack-order rule for finding the window under a curled corner.
 
-The current Apple Command Line Tools installation does not include either the
-Swift Testing or XCTest runtime, so test targets are intentionally deferred
-until full Xcode is available. Production module compilation is still validated
-with `swift build`.
+The stack-order tests use synthetic window metadata. Real ScreenCaptureKit
+permission, snapshot capture, and user input are checked in the macOS app.
 

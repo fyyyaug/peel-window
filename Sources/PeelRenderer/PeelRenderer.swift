@@ -99,10 +99,14 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     private let underlayPipelineState: MTLRenderPipelineState
     private let textureLoader: MTKTextureLoader
     private let indexBuffer: MTLBuffer
-    private let flatVertexBuffer: MTLBuffer
+    private var flatVertexBuffer: MTLBuffer?
     private var vertexBuffer: MTLBuffer?
     private var frontTexture: MTLTexture?
     private var underlayTexture: MTLTexture?
+    private var imageSize = CGSize(width: 800, height: 500)
+    private var underlaySize = CGSize(width: 800, height: 500)
+    private var drawableSize = CGSize(width: 1, height: 1)
+    private var previewLayout: PeelPreviewLayout?
 
     public init?(view: MTKView, mesh: PeelMesh = .init()) {
         guard
@@ -140,10 +144,6 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
             let indexBuffer = device.makeBuffer(
                 bytes: mesh.indices,
                 length: mesh.indices.count * MemoryLayout<UInt32>.stride
-            ),
-            let flatVertexBuffer = device.makeBuffer(
-                bytes: mesh.vertices,
-                length: mesh.vertices.count * MemoryLayout<PeelVertex>.stride
             )
         else {
             return nil
@@ -156,7 +156,6 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         self.underlayPipelineState = underlayPipelineState
         self.textureLoader = MTKTextureLoader(device: device)
         self.indexBuffer = indexBuffer
-        self.flatVertexBuffer = flatVertexBuffer
         super.init()
 
         view.device = device
@@ -166,7 +165,13 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         view.enableSetNeedsDisplay = true
         view.isPaused = true
         view.delegate = self
-        rebuildVertexBuffer()
+        drawableSize = view.drawableSize
+        updateLayout()
+    }
+
+    public func topRightCorner(in viewSize: CGSize) -> CGPoint {
+        PeelPreviewLayout(viewSize: viewSize, imageSize: imageSize)
+            .topRightCorner(in: viewSize)
     }
 
     public func showSnapshots(front: CGImage?, underneath: CGImage?) throws {
@@ -178,6 +183,11 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         let newUnderlay = try underneath.map { try textureLoader.newTexture(cgImage: $0, options: options) }
         frontTexture = newFront
         underlayTexture = newUnderlay
+        imageSize = front.map { CGSize(width: $0.width, height: $0.height) }
+            ?? CGSize(width: 800, height: 500)
+        underlaySize = underneath.map { CGSize(width: $0.width, height: $0.height) }
+            ?? imageSize
+        updateLayout()
     }
 
     public func draw(in view: MTKView) {
@@ -193,10 +203,19 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
             return
         }
 
-        if let underlayTexture {
+        if let underlayTexture, let flatVertexBuffer {
+            var mapping = PeelTextureMapping(
+                sourceSize: underlaySize,
+                destinationSize: imageSize
+            ).shaderValue
             encoder.setRenderPipelineState(underlayPipelineState)
             encoder.setVertexBuffer(flatVertexBuffer, offset: 0, index: 0)
             encoder.setFragmentTexture(underlayTexture, index: 0)
+            encoder.setFragmentBytes(
+                &mapping,
+                length: MemoryLayout<SIMD4<Float>>.stride,
+                index: 0
+            )
             encoder.drawIndexedPrimitives(
                 type: .triangle,
                 indexCount: mesh.indices.count,
@@ -222,10 +241,34 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         lastFrameDuration = CACurrentMediaTime() - frameStart
     }
 
-    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+        drawableSize = size
+        updateLayout()
+    }
+
+    private func updateLayout() {
+        let layout = PeelPreviewLayout(viewSize: drawableSize, imageSize: imageSize)
+        guard previewLayout != layout else { return }
+        previewLayout = layout
+        let vertices = mesh.vertices.map { vertex in
+            var result = vertex
+            result.position = layout.position(vertex.position)
+            return result
+        }
+        flatVertexBuffer = commandQueue.device.makeBuffer(
+            bytes: vertices,
+            length: vertices.count * MemoryLayout<PeelVertex>.stride
+        )
+        rebuildVertexBuffer()
+    }
 
     private func rebuildVertexBuffer() {
-        let vertices = mesh.deformed(for: pose)
+        guard let previewLayout else { return }
+        let vertices = mesh.deformed(for: pose).map { vertex in
+            var result = vertex
+            result.position = previewLayout.position(vertex.position)
+            return result
+        }
         vertexBuffer = commandQueue.device.makeBuffer(
             bytes: vertices,
             length: vertices.count * MemoryLayout<PeelVertex>.stride

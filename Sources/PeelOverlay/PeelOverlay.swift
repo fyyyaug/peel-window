@@ -22,6 +22,7 @@ public final class PeelDemoView: NSView {
     private let demoButton = NSButton(title: "Sample Pair", target: nil, action: nil)
     private let captureStatusLabel = NSTextField(labelWithString: "Choose Find Windows to load a real window snapshot")
     private let windowCatalog = PeelWindowCatalog()
+    private let windowStackResolver = PeelWindowStackResolver()
     private let snapshotter = PeelWindowSnapshotter()
 
     private var gestureMachine = PeelGestureMachine()
@@ -179,7 +180,7 @@ public final class PeelDemoView: NSView {
                 populateWindowMenus(with: choices)
                 captureButton.isEnabled = !choices.isEmpty
                 captureStatusLabel.stringValue = choices.isEmpty
-                    ? "No supported windows are currently visible."
+                    ? "No supported windows are available."
                     : "Select a front window and optionally a window underneath."
             } catch {
                 captureStatusLabel.stringValue = "Window discovery failed: \(error.localizedDescription)"
@@ -192,6 +193,7 @@ public final class PeelDemoView: NSView {
         underneathPopup.removeAllItems()
         frontPopup.addItem(withTitle: "Front window")
         underneathPopup.addItem(withTitle: "Window underneath (optional)")
+        underneathPopup.addItem(withTitle: "Auto-detect actual window below")
         for choice in choices {
             frontPopup.addItem(withTitle: choice.displayName)
             frontPopup.lastItem?.representedObject = NSNumber(value: choice.id)
@@ -207,8 +209,9 @@ public final class PeelDemoView: NSView {
             captureStatusLabel.stringValue = "Select a front window first."
             return
         }
-        let underneathID = (underneathPopup.selectedItem?.representedObject as? NSNumber)?.uint32Value
-        if underneathID == frontID {
+        let autoDetectUnderneath = underneathPopup.indexOfSelectedItem == 1
+        let selectedUnderneathID = (underneathPopup.selectedItem?.representedObject as? NSNumber)?.uint32Value
+        if selectedUnderneathID == frontID {
             captureStatusLabel.stringValue = "Choose a different window for underneath."
             return
         }
@@ -218,24 +221,31 @@ public final class PeelDemoView: NSView {
         Task { @MainActor in
             defer { captureButton.isEnabled = true }
             do {
+                _ = try await windowCatalog.refresh()
                 guard let frontWindow = windowCatalog.window(withID: frontID) else {
                     throw PeelCaptureError.windowUnavailable
                 }
+                let underneathID = autoDetectUnderneath
+                    ? windowStackResolver.windowBelow(sourceID: frontID, sourceFrame: frontWindow.frame)
+                    : selectedUnderneathID
                 let frontImage = try await snapshotter.capture(frontWindow)
                 var underneathImage: CGImage?
                 if let underneathID {
-                    guard let underneathWindow = windowCatalog.window(withID: underneathID) else {
+                    if let underneathWindow = windowCatalog.window(withID: underneathID) {
+                        underneathImage = try await snapshotter.capture(underneathWindow)
+                    } else if !autoDetectUnderneath {
                         throw PeelCaptureError.windowUnavailable
                     }
-                    underneathImage = try await snapshotter.capture(underneathWindow)
                 }
                 try renderer.showSnapshots(front: frontImage, underneath: underneathImage)
                 showingSamplePair = false
                 demoButton.title = "Sample Pair"
                 metalView.draw()
-                captureStatusLabel.stringValue = underneathImage == nil
-                    ? "Front snapshot ready. Drag the highlighted corner."
-                    : "Two snapshots ready. Drag to reveal the one underneath."
+                captureStatusLabel.stringValue = underneathImage != nil
+                    ? "Two snapshots ready. Drag to reveal the one underneath."
+                    : autoDetectUnderneath
+                        ? "No actual window at this corner. Showing the front snapshot."
+                        : "Front snapshot ready. Drag the highlighted corner."
             } catch {
                 captureStatusLabel.stringValue = "Capture failed: \(error.localizedDescription)"
             }
@@ -303,17 +313,12 @@ public final class PeelDemoView: NSView {
 
         switch recognizer.state {
         case .began:
-            // The synthetic card occupies x: -0.88...0.88 and y: -0.72...0.72
-            // in Metal clip space, so its visible top-right corner is inset.
             let translation = recognizer.translation(in: self)
             let startPoint = CGPoint(
                 x: point.x - translation.x,
                 y: point.y - translation.y
             )
-            let cornerPoint = CGPoint(
-                x: bounds.width * 0.94,
-                y: bounds.height * 0.86
-            )
+            let cornerPoint = renderer.topRightCorner(in: bounds.size)
             guard hypot(startPoint.x - cornerPoint.x, startPoint.y - cornerPoint.y) <= 110 else {
                 recognizer.isEnabled = false
                 recognizer.isEnabled = true
