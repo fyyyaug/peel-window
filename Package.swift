@@ -40,6 +40,8 @@ let package = Package(
                 "PeelCore",
                 "PeelInteraction",
                 "PeelRenderer",
+                "PeelWindowing",
+                "PeelCapture",
             ]
         ),
         .testTarget(

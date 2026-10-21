@@ -95,8 +95,14 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     private let mesh: PeelMesh
     private let commandQueue: MTLCommandQueue
     private let pipelineState: MTLRenderPipelineState
+    private let snapshotPipelineState: MTLRenderPipelineState
+    private let underlayPipelineState: MTLRenderPipelineState
+    private let textureLoader: MTKTextureLoader
     private let indexBuffer: MTLBuffer
+    private let flatVertexBuffer: MTLBuffer
     private var vertexBuffer: MTLBuffer?
+    private var frontTexture: MTLTexture?
+    private var underlayTexture: MTLTexture?
 
     public init?(view: MTKView, mesh: PeelMesh = .init()) {
         guard
@@ -109,7 +115,9 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
             let shaderSource = try? String(contentsOf: shaderURL, encoding: .utf8),
             let library = try? device.makeLibrary(source: shaderSource, options: nil),
             let vertexFunction = library.makeFunction(name: "peelVertex"),
-            let fragmentFunction = library.makeFunction(name: "peelFragment")
+            let fragmentFunction = library.makeFunction(name: "peelFragment"),
+            let snapshotFunction = library.makeFunction(name: "peelSnapshotFragment"),
+            let underlayFunction = library.makeFunction(name: "peelUnderlayFragment")
         else {
             return nil
         }
@@ -119,11 +127,23 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         descriptor.fragmentFunction = fragmentFunction
         descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
 
+        guard let pipelineState = try? device.makeRenderPipelineState(descriptor: descriptor) else {
+            return nil
+        }
+        descriptor.fragmentFunction = snapshotFunction
+        guard let snapshotPipelineState = try? device.makeRenderPipelineState(descriptor: descriptor) else {
+            return nil
+        }
+        descriptor.fragmentFunction = underlayFunction
         guard
-            let pipelineState = try? device.makeRenderPipelineState(descriptor: descriptor),
+            let underlayPipelineState = try? device.makeRenderPipelineState(descriptor: descriptor),
             let indexBuffer = device.makeBuffer(
                 bytes: mesh.indices,
                 length: mesh.indices.count * MemoryLayout<UInt32>.stride
+            ),
+            let flatVertexBuffer = device.makeBuffer(
+                bytes: mesh.vertices,
+                length: mesh.vertices.count * MemoryLayout<PeelVertex>.stride
             )
         else {
             return nil
@@ -132,7 +152,11 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         self.mesh = mesh
         self.commandQueue = commandQueue
         self.pipelineState = pipelineState
+        self.snapshotPipelineState = snapshotPipelineState
+        self.underlayPipelineState = underlayPipelineState
+        self.textureLoader = MTKTextureLoader(device: device)
         self.indexBuffer = indexBuffer
+        self.flatVertexBuffer = flatVertexBuffer
         super.init()
 
         view.device = device
@@ -143,6 +167,17 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         view.isPaused = true
         view.delegate = self
         rebuildVertexBuffer()
+    }
+
+    public func showSnapshots(front: CGImage?, underneath: CGImage?) throws {
+        let options: [MTKTextureLoader.Option: Any] = [
+            .origin: MTKTextureLoader.Origin.bottomLeft,
+            .SRGB: false,
+        ]
+        let newFront = try front.map { try textureLoader.newTexture(cgImage: $0, options: options) }
+        let newUnderlay = try underneath.map { try textureLoader.newTexture(cgImage: $0, options: options) }
+        frontTexture = newFront
+        underlayTexture = newUnderlay
     }
 
     public func draw(in view: MTKView) {
@@ -158,8 +193,22 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
             return
         }
 
-        encoder.setRenderPipelineState(pipelineState)
+        if let underlayTexture {
+            encoder.setRenderPipelineState(underlayPipelineState)
+            encoder.setVertexBuffer(flatVertexBuffer, offset: 0, index: 0)
+            encoder.setFragmentTexture(underlayTexture, index: 0)
+            encoder.drawIndexedPrimitives(
+                type: .triangle,
+                indexCount: mesh.indices.count,
+                indexType: .uint32,
+                indexBuffer: indexBuffer,
+                indexBufferOffset: 0
+            )
+        }
+
+        encoder.setRenderPipelineState(frontTexture == nil ? pipelineState : snapshotPipelineState)
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        encoder.setFragmentTexture(frontTexture, index: 0)
         encoder.drawIndexedPrimitives(
             type: .triangle,
             indexCount: mesh.indices.count,

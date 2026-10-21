@@ -4,7 +4,6 @@ import PeelOverlay
 struct ContentView: View {
     var body: some View {
         PeelDemoRepresentable()
-            .ignoresSafeArea()
     }
 }
 

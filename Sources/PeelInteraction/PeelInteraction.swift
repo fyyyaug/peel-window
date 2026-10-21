@@ -21,6 +21,14 @@ public struct PeelGestureConfiguration: Equatable, Sendable {
         self.stiffness = stiffness
         self.damping = damping
     }
+
+    public static func reboundStrength(_ value: Double) -> Self {
+        let strength = value.clamped(to: 0.25...2)
+        return Self(
+            stiffness: 190 * strength,
+            damping: 24 * sqrt(strength)
+        )
+    }
 }
 
 public struct PeelGestureMachine: Sendable {

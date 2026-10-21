@@ -51,3 +51,25 @@ fragment float4 peelFragment(RasterData input [[stage_in]]) {
     float shadow = 1.0 - input.curl * input.curl * 0.18;
     return float4(color * light * shadow, 1.0);
 }
+
+fragment float4 peelSnapshotFragment(
+    RasterData input [[stage_in]],
+    texture2d<float> snapshot [[texture(0)]]
+) {
+    constexpr sampler imageSampler(filter::linear, address::clamp_to_edge);
+    float3 color = snapshot.sample(imageSampler, input.textureCoordinate).rgb;
+    float cornerDistance = distance(input.textureCoordinate, float2(1.0, 1.0));
+    float highlight = 1.0 - smoothstep(0.025, 0.09, cornerDistance);
+    color = mix(color, float3(1.0, 0.48, 0.22), highlight * 0.55);
+    float light = 1.0 + input.curl * 0.28;
+    float shadow = 1.0 - input.curl * input.curl * 0.18;
+    return float4(color * light * shadow, 1.0);
+}
+
+fragment float4 peelUnderlayFragment(
+    RasterData input [[stage_in]],
+    texture2d<float> snapshot [[texture(0)]]
+) {
+    constexpr sampler imageSampler(filter::linear, address::clamp_to_edge);
+    return snapshot.sample(imageSampler, input.textureCoordinate);
+}

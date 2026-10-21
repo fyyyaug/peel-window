@@ -2,6 +2,17 @@ import Testing
 import PeelCore
 @testable import PeelInteraction
 
+@Test("Return strength adjusts the spring and stays within supported bounds")
+func reboundStrengthConfiguration() {
+    let gentle = PeelGestureConfiguration.reboundStrength(0.25)
+    let firm = PeelGestureConfiguration.reboundStrength(2)
+
+    #expect(gentle.stiffness < firm.stiffness)
+    #expect(gentle.damping < firm.damping)
+    #expect(PeelGestureConfiguration.reboundStrength(0).stiffness == gentle.stiffness)
+    #expect(PeelGestureConfiguration.reboundStrength(3).stiffness == firm.stiffness)
+}
+
 @Test("Dragging produces a normalized peel pose")
 func draggingProducesPose() {
     var machine = PeelGestureMachine(

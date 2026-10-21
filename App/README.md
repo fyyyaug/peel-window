@@ -13,7 +13,11 @@ The app target should remain thin. Its responsibilities are limited to:
 Window discovery, capture, interaction physics, rendering, and overlay behavior
 belong in their corresponding Swift package modules.
 
-The app links the repository's local Swift package and currently hosts the
-synthetic Phase 1 Metal peel prototype. Open
-`PeelWindow/PeelWindow.xcodeproj` to build and run it on My Mac.
+The app links the repository's local Swift package. Open
+`PeelWindow/PeelWindow.xcodeproj` to build and run it on My Mac. The Sample Pair
+button demonstrates the front/underneath reveal without screen access. The
+Find Windows button requests macOS Screen Recording access when needed; after
+granting it in System Settings, restart PeelWindow and choose the windows to
+capture. Return strength is adjustable in the top-right slider and saved for
+the next launch.
 

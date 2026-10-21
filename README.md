@@ -3,6 +3,10 @@
 Peel Window is a native macOS interaction prototype for temporarily revealing
 an obscured window by lifting a corner of the window above it.
 
+The intended interaction is temporary: while the user holds a peeled corner,
+the window directly underneath becomes visible; releasing the pointer restores
+the original view. The user can adjust and retain the return strength.
+
 The first milestone is intentionally narrow: make the peel gesture feel
 immediate, physical, and visually convincing before integrating with arbitrary
 macOS windows.
@@ -35,7 +39,11 @@ permissions, and lifecycle.
 - Synthetic Metal window mesh renders in the app
 - Top-right drag, normalized peel pose, and spring return are implemented
 - Six package tests cover geometry, interaction, and mesh deformation
-- Real window discovery and capture are intentionally deferred to later milestones
+- Return strength can be adjusted in the app and persists across launches
+- ScreenCaptureKit window discovery and still-image capture are wired into the
+  app through an explicit Find Windows action
+- The app can display a local sample pair or selected front/underneath window
+  snapshots; the true desktop overlay is a later milestone
 
 See [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md) and
 [Docs/ROADMAP.md](Docs/ROADMAP.md) for the working plan.

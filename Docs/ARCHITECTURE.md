@@ -16,6 +16,12 @@ Instead, the MVP creates a short-lived visual surrogate:
 This boundary keeps the prototype compatible with public macOS APIs and makes
 the illusion replaceable without coupling it to the interaction model.
 
+The M2 app preview can use two manually selected still images to test the reveal.
+The final interaction must determine the actual window immediately below the
+source and show it only during the peel. A completed release or cancellation
+must leave the desktop looking exactly as it did before the gesture. Return
+strength is a user setting, stored locally and applied to the spring motion.
+
 ## Module responsibilities
 
 ### PeelCore
