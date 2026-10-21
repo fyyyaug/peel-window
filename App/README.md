@@ -1,6 +1,6 @@
 # macOS app host
 
-This directory will contain the `PeelWindow.app` Xcode project.
+This directory contains the `PeelWindow.app` Xcode project in `PeelWindow/`.
 
 The app target should remain thin. Its responsibilities are limited to:
 
@@ -13,6 +13,7 @@ The app target should remain thin. Its responsibilities are limited to:
 Window discovery, capture, interaction physics, rendering, and overlay behavior
 belong in their corresponding Swift package modules.
 
-The project file is intentionally deferred until full Xcode is available so it
-can be generated and validated by Xcode rather than hand-authored.
+The app links the repository's local Swift package and currently hosts the
+synthetic Phase 1 Metal peel prototype. Open
+`PeelWindow/PeelWindow.xcodeproj` to build and run it on My Mac.
 

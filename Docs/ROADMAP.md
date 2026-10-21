@@ -2,21 +2,22 @@
 
 ## M0 — Architecture scaffold
 
-- Define module boundaries and dependency direction.
-- Establish a Swift package that builds without product behavior.
-- Document the macOS visual-surrogate constraint.
-- Add the thin Xcode app host after full Xcode is available.
+- [x] Define module boundaries and dependency direction.
+- [x] Establish a Swift package with independently buildable modules.
+- [x] Document the macOS visual-surrogate constraint.
+- [x] Add the thin Xcode app host and connect the local package.
 
-Exit condition: the package builds from a clean checkout. Package test targets
-are enabled when the full Xcode testing runtime is available.
+Exit condition met: the package and macOS app build from a clean checkout, and
+the package test targets run with the full Xcode testing runtime.
 
 ## M1 — Synthetic peel prototype
 
-- Render a static sample window texture.
-- Detect a drag from one chosen corner.
-- Deform a small Metal mesh from flat to peeled.
-- Settle back with a tunable spring animation.
-- Display frame time and gesture latency.
+- [x] Render a static sample window surface.
+- [x] Detect a drag from the highlighted top-right corner.
+- [x] Deform a small Metal mesh from flat to peeled.
+- [x] Settle back with a tunable spring animation.
+- [x] Display phase, peel progress, and frame time.
+- [ ] Tune the deformation until the interaction reads as a paper-like curl.
 
 Exit condition: a short screen recording makes the interaction immediately
 understandable without explanation.

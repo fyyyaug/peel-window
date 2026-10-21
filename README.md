@@ -30,9 +30,12 @@ permissions, and lifecycle.
 ## Current status
 
 - Architecture scaffold created
-- Module dependency graph builds with Swift Package Manager
-- Product behavior is intentionally not implemented yet
-- A full Xcode installation is required before the macOS app target is added
+- Native macOS Xcode app created in `App/PeelWindow`
+- Local Swift package connected to the app target
+- Synthetic Metal window mesh renders in the app
+- Top-right drag, normalized peel pose, and spring return are implemented
+- Six package tests cover geometry, interaction, and mesh deformation
+- Real window discovery and capture are intentionally deferred to later milestones
 
 See [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md) and
 [Docs/ROADMAP.md](Docs/ROADMAP.md) for the working plan.

@@ -1,0 +1,53 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct PeelVertex {
+    float3 position;
+    float2 textureCoordinate;
+    float curl;
+};
+
+struct RasterData {
+    float4 position [[position]];
+    float2 textureCoordinate;
+    float curl;
+};
+
+vertex RasterData peelVertex(
+    uint vertexID [[vertex_id]],
+    const device PeelVertex *vertices [[buffer(0)]]
+) {
+    PeelVertex input = vertices[vertexID];
+    RasterData output;
+
+    float perspective = 1.0 - input.position.z * 0.20;
+    float2 projected = input.position.xy * perspective;
+    projected.y += input.position.z * 0.15;
+
+    output.position = float4(projected, 0.0, 1.0);
+    output.textureCoordinate = input.textureCoordinate;
+    output.curl = input.curl;
+    return output;
+}
+
+fragment float4 peelFragment(RasterData input [[stage_in]]) {
+    float3 topColor = float3(0.91, 0.94, 1.00);
+    float3 bottomColor = float3(0.58, 0.68, 0.92);
+    float3 color = mix(bottomColor, topColor, input.textureCoordinate.y);
+
+    float titleBar = smoothstep(0.83, 0.86, input.textureCoordinate.y);
+    color = mix(color, float3(0.16, 0.20, 0.31), titleBar);
+
+    float cornerDistance = distance(input.textureCoordinate, float2(1.0, 1.0));
+    float cornerHighlight = 1.0 - smoothstep(0.025, 0.09, cornerDistance);
+    color = mix(color, float3(1.0, 0.48, 0.22), cornerHighlight);
+
+    float edgeX = min(input.textureCoordinate.x, 1.0 - input.textureCoordinate.x);
+    float edgeY = min(input.textureCoordinate.y, 1.0 - input.textureCoordinate.y);
+    float edge = smoothstep(0.0, 0.018, min(edgeX, edgeY));
+    color *= mix(0.68, 1.0, edge);
+
+    float light = 1.0 + input.curl * 0.28;
+    float shadow = 1.0 - input.curl * input.curl * 0.18;
+    return float4(color * light * shadow, 1.0);
+}
