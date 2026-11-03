@@ -32,19 +32,32 @@ func draggingProducesPose() {
     #expect(machine.pose.lift > 0.99)
 }
 
-@Test("A page only turns when dragged inward from its free edge")
-func pageTurnDirection() {
-    var right = PeelGestureMachine(configuration: .init(maximumDragDistance: 100))
-    right.begin(corner: .bottomRight, at: PeelPoint(x: 100, y: 100), timestamp: 0)
-    right.update(to: PeelPoint(x: 140, y: 0), timestamp: 0.1)
-    #expect(right.pose.progress == 0)
-    right.update(to: PeelPoint(x: 50, y: 0), timestamp: 0.2)
-    #expect(right.pose.progress == 0.5)
+@Test("Both bottom corners begin a diagonal peel toward the window center")
+func bottomCornerGestures() {
+    for (corner, targetX) in [(PeelCorner.bottomLeft, 150.0), (.bottomRight, 50.0)] {
+        var machine = PeelGestureMachine(configuration: .init(maximumDragDistance: 100))
+        machine.begin(corner: corner, at: PeelPoint(x: 100, y: 100), timestamp: 0)
+        machine.update(to: PeelPoint(x: targetX, y: 150), timestamp: 0.1)
+        #expect(machine.pose.corner == corner)
+        #expect(machine.pose.progress > 0.7)
+        #expect(machine.pose.lift > 0.8)
+    }
+}
 
-    var left = PeelGestureMachine(configuration: .init(maximumDragDistance: 100))
-    left.begin(corner: .topLeft, at: PeelPoint(x: 100, y: 100), timestamp: 0)
-    left.update(to: PeelPoint(x: 150, y: 200), timestamp: 0.1)
-    #expect(left.pose.progress == 0.5)
+@Test("Dragging a corner outward leaves the page flat")
+func outwardCornerGestures() {
+    for corner in PeelCorner.allCases {
+        var machine = PeelGestureMachine(configuration: .init(maximumDragDistance: 100))
+        machine.begin(corner: corner, at: PeelPoint(x: 100, y: 100), timestamp: 0)
+        let outwardX = corner.unitPoint.x == 0 ? -50.0 : 50.0
+        let outwardY = corner.unitPoint.y == 0 ? -50.0 : 50.0
+        machine.update(
+            to: PeelPoint(x: 100 + outwardX, y: 100 + outwardY),
+            timestamp: 0.1
+        )
+        #expect(machine.pose.progress == 0)
+        #expect(machine.pose.pull == .zero)
+    }
 }
 
 @Test("Released peel settles back to the flat state")

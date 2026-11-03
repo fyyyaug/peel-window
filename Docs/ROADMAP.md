@@ -14,14 +14,17 @@ the package test targets run with the full Xcode testing runtime.
 
 - [x] Render a static sample window surface.
 - [x] Detect a drag from any enabled corner in the preview.
-- [x] Turn the full Metal window mesh around the opposite edge like a book page.
+- [x] Use a page curl with a visible backside and shadow, starting at a
+      selected corner and carrying the fold toward the other corner as the
+      drag deepens.
+- [x] Add a 50% still preview to inspect the curl without dragging.
 - [x] Settle back with a tunable spring animation.
 - [x] Display phase, peel progress, and frame time.
 - [x] Let the user adjust and retain the return strength.
-- [x] Let the user choose enabled corners and a maximum page-turn percentage;
-      retain both settings.
-- [ ] Tune page thickness, edge shadow, and lighting until the book-page turn
-      reads clearly in motion.
+- [x] Let the user choose enabled corners and maximum peel reach as a
+      percentage of the preview window's edges; retain both settings.
+- [ ] Tune the fold, edge shadow, and lighting until the corner peel reads
+      clearly in motion.
 
 Exit condition: a short screen recording makes the interaction immediately
 understandable without explanation.

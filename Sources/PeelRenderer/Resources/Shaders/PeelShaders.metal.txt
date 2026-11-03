@@ -20,13 +20,29 @@ vertex RasterData peelVertex(
     PeelVertex input = vertices[vertexID];
     RasterData output;
 
-    output.position = float4(input.position.xy, 0.0, 1.0);
+    float perspective = 1.0 - input.position.z * 0.20;
+    float2 projected = input.position.xy * perspective;
+    projected.y += input.position.z * 0.15;
+
+    output.position = float4(projected, 0.0, 1.0);
     output.textureCoordinate = input.textureCoordinate;
     output.curl = input.curl;
     return output;
 }
 
-fragment float4 peelFragment(RasterData input [[stage_in]]) {
+float cornerGlow(float2 uv, float4 enabledCorners) {
+    float topLeft = 1.0 - smoothstep(0.025, 0.09, distance(uv, float2(0.0, 1.0)));
+    float topRight = 1.0 - smoothstep(0.025, 0.09, distance(uv, float2(1.0, 1.0)));
+    float bottomLeft = 1.0 - smoothstep(0.025, 0.09, distance(uv, float2(0.0, 0.0)));
+    float bottomRight = 1.0 - smoothstep(0.025, 0.09, distance(uv, float2(1.0, 0.0)));
+    return max(max(topLeft * enabledCorners.x, topRight * enabledCorners.y),
+               max(bottomLeft * enabledCorners.z, bottomRight * enabledCorners.w));
+}
+
+fragment float4 peelFragment(
+    RasterData input [[stage_in]],
+    constant float4 &enabledCorners [[buffer(0)]]
+) {
     float3 topColor = float3(0.91, 0.94, 1.00);
     float3 bottomColor = float3(0.58, 0.68, 0.92);
     float3 color = mix(bottomColor, topColor, input.textureCoordinate.y);
@@ -34,27 +50,31 @@ fragment float4 peelFragment(RasterData input [[stage_in]]) {
     float titleBar = smoothstep(0.83, 0.86, input.textureCoordinate.y);
     color = mix(color, float3(0.16, 0.20, 0.31), titleBar);
 
+    color = mix(color, float3(1.0, 0.48, 0.22),
+                cornerGlow(input.textureCoordinate, enabledCorners));
+
     float edgeX = min(input.textureCoordinate.x, 1.0 - input.textureCoordinate.x);
     float edgeY = min(input.textureCoordinate.y, 1.0 - input.textureCoordinate.y);
     float edge = smoothstep(0.0, 0.018, min(edgeX, edgeY));
     color *= mix(0.68, 1.0, edge);
 
-    float backside = smoothstep(0.49, 0.51, input.curl);
-    color = mix(color, float3(0.88, 0.84, 0.76), backside);
-    float light = 1.0 - 0.16 * sin(input.curl * 3.14159265);
-    return float4(color * light, 1.0);
+    float light = 1.0 + input.curl * 0.28;
+    float shadow = 1.0 - input.curl * input.curl * 0.18;
+    return float4(color * light * shadow, 1.0);
 }
 
 fragment float4 peelSnapshotFragment(
     RasterData input [[stage_in]],
-    texture2d<float> snapshot [[texture(0)]]
+    texture2d<float> snapshot [[texture(0)]],
+    constant float4 &enabledCorners [[buffer(0)]]
 ) {
     constexpr sampler imageSampler(filter::linear, address::clamp_to_edge);
     float3 color = snapshot.sample(imageSampler, input.textureCoordinate).rgb;
-    float backside = smoothstep(0.49, 0.51, input.curl);
-    color = mix(color, float3(0.88, 0.84, 0.76), backside);
-    float light = 1.0 - 0.16 * sin(input.curl * 3.14159265);
-    return float4(color * light, 1.0);
+    color = mix(color, float3(1.0, 0.48, 0.22),
+                cornerGlow(input.textureCoordinate, enabledCorners) * 0.55);
+    float light = 1.0 + input.curl * 0.28;
+    float shadow = 1.0 - input.curl * input.curl * 0.18;
+    return float4(color * light * shadow, 1.0);
 }
 
 fragment float4 peelUnderlayFragment(

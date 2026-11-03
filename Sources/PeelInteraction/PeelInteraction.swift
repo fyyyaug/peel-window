@@ -70,12 +70,15 @@ public struct PeelGestureMachine: Sendable {
         previousTimestamp = timestamp
 
         let rawDisplacement = point - origin
+        let inwardDisplacement = PeelPoint(
+            x: pose.corner.unitPoint.x == 0
+                ? max(rawDisplacement.x, 0) : min(rawDisplacement.x, 0),
+            y: pose.corner.unitPoint.y == 0
+                ? max(rawDisplacement.y, 0) : min(rawDisplacement.y, 0)
+        )
         let maximum = max(configuration.maximumDragDistance, 1)
-        let clampedDisplacement = rawDisplacement.clampedLength(to: maximum)
-        let inwardDistance = pose.corner.unitPoint.x == 1
-            ? max(-rawDisplacement.x, 0)
-            : max(rawDisplacement.x, 0)
-        let progress = min(inwardDistance / maximum, 1)
+        let clampedDisplacement = inwardDisplacement.clampedLength(to: maximum)
+        let progress = clampedDisplacement.length / maximum
         let easedLift = sin(progress * .pi / 2)
 
         pose = PeelPose(

@@ -1,5 +1,10 @@
+import CoreImage
 import MetalKit
 import PeelCore
+
+public enum PeelRendererError: Error {
+    case pageCurlTextureUnavailable
+}
 
 public struct PeelVertex: Equatable, Sendable {
     public var position: SIMD3<Float>
@@ -64,21 +69,33 @@ public struct PeelMesh: Sendable {
         self.indices = indices
     }
 
-    /// Turns the entire sheet about the edge opposite the grabbed corner.
-    /// A right-hand grab uses the left edge as the book spine, and vice versa.
-    public func deformed(for pose: PeelPose, maximumTurn: Double = 0.82) -> [PeelVertex] {
-        let turnFraction = maximumTurn.clamped(to: 0.1...1)
-        let angle = pose.progress * turnFraction * .pi
-        let hingeX = pose.corner.unitPoint.x == 1 ? -0.88 : 0.88
+    /// A corner starts the curl; dragging farther carries one continuous
+    /// rolled edge toward the other corner rather than creating two flaps.
+    public func deformed(for pose: PeelPose, maximumReach: Double = 0.82) -> [PeelVertex] {
+        let reach = maximumReach.clamped(to: 0.1...1)
+        let verticalCoverage = min(pose.progress * 1.15, 1)
+        let transitionWidth = 0.18
         return vertices.map { vertex in
             var result = vertex
-            let distanceFromSpine = Double(vertex.position.x) - hingeX
-            let depth = abs(distanceFromSpine) * sin(angle) * 0.36
-            let perspective = 1 / (1 + depth * 0.16)
-            result.position.x = Float(hingeX + distanceFromSpine * cos(angle) * perspective)
-            result.position.y = Float(Double(vertex.position.y) * (1 - depth * 0.04))
-            result.position.z = Float(depth)
-            result.curl = Float(angle / .pi)
+            let u = Double(vertex.textureCoordinate.x)
+            let v = Double(vertex.textureCoordinate.y)
+            let corner = pose.corner.unitPoint
+            let horizontalDistance = abs(u - corner.x)
+            let verticalDistance = abs(v - corner.y)
+            let horizontalLinear = (1 - horizontalDistance / reach).clamped(to: 0...1)
+            let horizontalInfluence = horizontalLinear * horizontalLinear
+                * (3 - 2 * horizontalLinear)
+            let verticalLinear = ((verticalCoverage + transitionWidth - verticalDistance)
+                / transitionWidth).clamped(to: 0...1)
+            let verticalInfluence = verticalLinear * verticalLinear * (3 - 2 * verticalLinear)
+            let influence = horizontalInfluence * verticalInfluence
+            let curl = sin(influence * .pi / 2) * pose.lift
+
+            result.position.x += Float(pose.pull.x * influence * 0.72 * reach / 0.82)
+            let verticalDirection = 1 - 2 * verticalDistance
+            result.position.y += Float(pose.pull.y * influence * verticalDirection * 0.72 * reach / 0.82)
+            result.position.z = Float(curl * 0.62)
+            result.curl = Float(curl)
             return result
         }
     }
@@ -89,9 +106,10 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     public var pose: PeelPose = .flat {
         didSet { rebuildVertexBuffer() }
     }
-    public var maximumTurn: Double = 0.82 {
+    public var maximumReach: Double = 0.82 {
         didSet { rebuildVertexBuffer() }
     }
+    public var highlightedCorners: Set<PeelCorner> = [.topRight]
 
     public private(set) var lastFrameDuration: TimeInterval = 0
 
@@ -101,11 +119,16 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     private let snapshotPipelineState: MTLRenderPipelineState
     private let underlayPipelineState: MTLRenderPipelineState
     private let textureLoader: MTKTextureLoader
+    private let ciContext: CIContext
+    private let colorSpace = CGColorSpaceCreateDeviceRGB()
     private let indexBuffer: MTLBuffer
     private var flatVertexBuffer: MTLBuffer?
     private var vertexBuffer: MTLBuffer?
     private var frontTexture: MTLTexture?
     private var underlayTexture: MTLTexture?
+    private var frontCIImage: CIImage?
+    private var underlayCIImage: CIImage?
+    private var pageCurlTexture: MTLTexture?
     private var imageSize = CGSize(width: 800, height: 500)
     private var underlaySize = CGSize(width: 800, height: 500)
     private var drawableSize = CGSize(width: 1, height: 1)
@@ -158,6 +181,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         self.snapshotPipelineState = snapshotPipelineState
         self.underlayPipelineState = underlayPipelineState
         self.textureLoader = MTKTextureLoader(device: device)
+        self.ciContext = CIContext(mtlDevice: device)
         self.indexBuffer = indexBuffer
         super.init()
 
@@ -184,8 +208,27 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         ]
         let newFront = try front.map { try textureLoader.newTexture(cgImage: $0, options: options) }
         let newUnderlay = try underneath.map { try textureLoader.newTexture(cgImage: $0, options: options) }
+        let newPageCurlTexture: MTLTexture?
+        if let front {
+            let descriptor = MTLTextureDescriptor.texture2DDescriptor(
+                pixelFormat: .bgra8Unorm,
+                width: front.width,
+                height: front.height,
+                mipmapped: false
+            )
+            descriptor.usage = [.shaderRead, .shaderWrite]
+            guard let texture = commandQueue.device.makeTexture(descriptor: descriptor) else {
+                throw PeelRendererError.pageCurlTextureUnavailable
+            }
+            newPageCurlTexture = texture
+        } else {
+            newPageCurlTexture = nil
+        }
         frontTexture = newFront
         underlayTexture = newUnderlay
+        frontCIImage = front.map(CIImage.init(cgImage:))
+        underlayCIImage = underneath.map(CIImage.init(cgImage:))
+        pageCurlTexture = newPageCurlTexture
         imageSize = front.map { CGSize(width: $0.width, height: $0.height) }
             ?? CGSize(width: 800, height: 500)
         underlaySize = underneath.map { CGSize(width: $0.width, height: $0.height) }
@@ -200,9 +243,56 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
             let descriptor = view.currentRenderPassDescriptor,
             let drawable = view.currentDrawable,
             let vertexBuffer,
-            let commandBuffer = commandQueue.makeCommandBuffer(),
-            let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor)
+            let commandBuffer = commandQueue.makeCommandBuffer()
         else {
+            return
+        }
+
+        var renderedPageCurl = false
+        if let frontCIImage, let pageCurlTexture, pose.progress > 0.001,
+           let output = PeelPageCurl.image(
+                front: frontCIImage,
+                underneath: underlayCIImage,
+                corner: pose.corner,
+                progress: pose.progress,
+                maximumSize: maximumReach
+           ) {
+            let bounds = CGRect(x: 0, y: 0, width: pageCurlTexture.width, height: pageCurlTexture.height)
+            ciContext.render(
+                output,
+                to: pageCurlTexture,
+                commandBuffer: commandBuffer,
+                bounds: bounds,
+                colorSpace: colorSpace
+            )
+            renderedPageCurl = true
+        }
+
+        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
+            return
+        }
+
+        if renderedPageCurl, let pageCurlTexture, let flatVertexBuffer {
+            var identityMapping = SIMD4<Float>(1, 1, 0, 0)
+            encoder.setRenderPipelineState(underlayPipelineState)
+            encoder.setVertexBuffer(flatVertexBuffer, offset: 0, index: 0)
+            encoder.setFragmentTexture(pageCurlTexture, index: 0)
+            encoder.setFragmentBytes(
+                &identityMapping,
+                length: MemoryLayout<SIMD4<Float>>.stride,
+                index: 0
+            )
+            encoder.drawIndexedPrimitives(
+                type: .triangle,
+                indexCount: mesh.indices.count,
+                indexType: .uint32,
+                indexBuffer: indexBuffer,
+                indexBufferOffset: 0
+            )
+            encoder.endEncoding()
+            commandBuffer.present(drawable)
+            commandBuffer.commit()
+            lastFrameDuration = CACurrentMediaTime() - frameStart
             return
         }
 
@@ -231,6 +321,17 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         encoder.setRenderPipelineState(frontTexture == nil ? pipelineState : snapshotPipelineState)
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setFragmentTexture(frontTexture, index: 0)
+        var cornerMask = SIMD4<Float>(
+            highlightedCorners.contains(.topLeft) ? 1 : 0,
+            highlightedCorners.contains(.topRight) ? 1 : 0,
+            highlightedCorners.contains(.bottomLeft) ? 1 : 0,
+            highlightedCorners.contains(.bottomRight) ? 1 : 0
+        )
+        encoder.setFragmentBytes(
+            &cornerMask,
+            length: MemoryLayout<SIMD4<Float>>.stride,
+            index: 0
+        )
         encoder.drawIndexedPrimitives(
             type: .triangle,
             indexCount: mesh.indices.count,
@@ -267,7 +368,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
 
     private func rebuildVertexBuffer() {
         guard let previewLayout else { return }
-        let vertices = mesh.deformed(for: pose, maximumTurn: maximumTurn).map { vertex in
+        let vertices = mesh.deformed(for: pose, maximumReach: maximumReach).map { vertex in
             var result = vertex
             result.position = previewLayout.position(vertex.position)
             return result

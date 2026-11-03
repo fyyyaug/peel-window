@@ -1,14 +1,14 @@
 # Peel Window
 
 Peel Window is a native macOS interaction prototype for temporarily revealing
-an obscured window by turning the window above it like a book page.
+an obscured window by lifting a corner of the window above it.
 
-The intended interaction is temporary: while the user turns a page inward,
+The intended interaction is temporary: while the user holds a lifted corner,
 the window directly underneath becomes visible; releasing the pointer restores
 the original view. The user can choose active corners, maximum peel size, and
 return strength; these settings persist across launches.
 
-The first milestone is intentionally narrow: make the page-turn gesture feel
+The first milestone is intentionally narrow: make the corner-peel gesture feel
 immediate, physical, and visually convincing before integrating with arbitrary
 macOS windows.
 
@@ -21,7 +21,7 @@ Sources/
   PeelInteraction/           Gesture state machine and spring behavior
   PeelWindowing/             Window discovery and Accessibility integration
   PeelCapture/               ScreenCaptureKit capture pipeline
-  PeelRenderer/              Metal mesh deformation and shaders
+  PeelRenderer/              Core Image page curl and Metal presentation
   PeelOverlay/               AppKit overlay panels and event routing
 Tests/                       Fast package-level tests
 Docs/                        Architecture and delivery decisions
@@ -37,17 +37,18 @@ permissions, and lifecycle.
 - Architecture scaffold created
 - Native macOS Xcode app created in `App/PeelWindow`
 - Local Swift package connected to the app target
-- Synthetic Metal window mesh renders in the app and turns as a whole page
-  around the opposite edge from the grabbed corner
-- Four independently enabled corners, inward-only page turns, and spring return
-  are implemented in the preview
-- Seventeen package tests cover geometry, interaction, page-turn deformation,
+- Captured and sample windows use Core Image's page-curl transition, including
+  a curved fold, paper backside, and shadow; a deep drag carries the fold
+  toward the other corner on the same side
+- Four independently enabled corners and spring return are implemented in the
+  preview; the switches choose where a drag can start, not where the fold ends
+- Twenty-one package tests cover geometry, interaction, page-curl orientation,
   aspect-preserving preview layout, and per-corner lower-window selection
-- Maximum page turn (10–100% of a 180° turn) and return
+- Maximum peel size (10–100% reach along the preview edges) and return
   strength (0.25–2×) can be adjusted and persist across launches
 - ScreenCaptureKit window discovery and still-image capture are wired into the
   app through an explicit Find Windows action
-- The app can display a local sample pair or selected front/underneath window
+- The app opens with a local sample pair and a 50% curl preview, or can display selected front/underneath window
   snapshots without stretching them; the true desktop overlay is a later
   milestone
 - Real dual-window capture and the peel gesture have been checked on a Mac

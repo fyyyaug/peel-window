@@ -8,8 +8,8 @@ Instead, the MVP creates a short-lived visual surrogate:
 1. Identify the foreground window and the corner being dragged.
 2. Capture a current image of that window.
 3. Place the image in a transparent, borderless overlay aligned to the source.
-4. Deform the overlay with a Metal mesh while the source window is visually
-   suppressed or covered.
+4. Curl the captured image with Core Image and present it through Metal while
+   the source window is visually suppressed or covered.
 5. Reveal the real desktop and windows underneath.
 6. Animate the surrogate back, then restore the normal window presentation.
 
@@ -50,9 +50,9 @@ and stale-frame handling explicit.
 
 ### PeelRenderer
 
-Metal rendering, mesh generation, deformation, lighting, edge treatment, and
-shadow composition. It receives interaction state and captured pixels; it does
-not discover windows or own permissions.
+Core Image page-curl composition and Metal presentation. It receives
+interaction state and captured pixels; it does not discover windows or own
+permissions. The synthetic mesh remains a fallback when no image is loaded.
 
 ### PeelOverlay
 

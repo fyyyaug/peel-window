@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreImage
 import Testing
 import PeelCore
 @testable import PeelRenderer
@@ -11,41 +12,73 @@ func meshTopology() {
     #expect(mesh.indices.count == 36)
 }
 
-@Test("A right-hand page turn keeps the whole left edge on its spine")
-func rightPageTurnHinge() {
+@Test("Each selected corner curls more than its opposite corner")
+func everyCornerCurlFalloff() {
+    let mesh = PeelMesh(columns: 3, rows: 3)
+    let cases: [(PeelCorner, Int, Int, PeelPoint)] = [
+        (.bottomLeft, 0, 8, PeelPoint(x: 0.5, y: 0.5)),
+        (.bottomRight, 2, 6, PeelPoint(x: -0.5, y: 0.5)),
+        (.topLeft, 6, 2, PeelPoint(x: 0.5, y: -0.5)),
+        (.topRight, 8, 0, PeelPoint(x: -0.5, y: -0.5)),
+    ]
+    for (corner, selectedIndex, oppositeIndex, pull) in cases {
+        let pose = PeelPose(corner: corner, pull: pull, progress: 0.8, lift: 0.9)
+        let vertices = mesh.deformed(for: pose)
+        #expect(vertices[selectedIndex].curl > 0.8)
+        #expect(vertices[oppositeIndex].curl == 0)
+        #expect(vertices[selectedIndex].position.z > vertices[oppositeIndex].position.z)
+    }
+}
+
+@Test("A deep upper-corner peel spreads to the lower corner on the same edge")
+func upperPeelReachesLowerCorner() {
+    let mesh = PeelMesh(columns: 3, rows: 3)
+    let shallow = PeelPose(
+        corner: .topRight,
+        pull: PeelPoint(x: -0.25, y: -0.25),
+        progress: 0.25,
+        lift: 0.4
+    )
+    let deep = PeelPose(
+        corner: .topRight,
+        pull: PeelPoint(x: -0.7, y: -0.7),
+        progress: 1,
+        lift: 1
+    )
+    let early = mesh.deformed(for: shallow)
+    let late = mesh.deformed(for: deep)
+
+    #expect(early[2].curl == 0)
+    #expect(early[5].curl == 0)
+    #expect(abs(Double(early[8].position.x) - 0.70) < 0.000_001)
+    #expect(abs(Double(early[8].position.y) - 0.54) < 0.000_001)
+    #expect(late[2].curl > 0.9)
+    #expect(late[5].curl > 0.9)
+    #expect(late[2].position.x < mesh.vertices[2].position.x)
+    #expect(late[2].position.y > mesh.vertices[2].position.y)
+    #expect(late[8].position.y < mesh.vertices[8].position.y)
+    #expect(late[0].curl == 0)
+}
+
+@Test("A deep lower-corner peel also spreads upward on the same edge")
+func lowerPeelReachesUpperCorner() {
     let mesh = PeelMesh(columns: 3, rows: 3)
     let pose = PeelPose(
-        corner: .topRight,
-        pull: PeelPoint(x: -0.6, y: -0.4),
-        progress: 0.8,
-        lift: 0.9
+        corner: .bottomLeft,
+        pull: PeelPoint(x: 0.7, y: 0.7),
+        progress: 1,
+        lift: 1
     )
     let vertices = mesh.deformed(for: pose)
-    let bottomLeft = vertices[0]
-    let topLeft = vertices[6]
-    let bottomRight = vertices[2]
-    let topRight = vertices[8]
-
-    #expect(bottomLeft.position.x == mesh.vertices[0].position.x)
-    #expect(topLeft.position.x == mesh.vertices[6].position.x)
-    #expect(bottomRight.position.x == topRight.position.x)
-    #expect(bottomRight.position.z > bottomLeft.position.z)
-    #expect(topRight.position.z == bottomRight.position.z)
+    #expect(vertices[6].curl > 0.9)
+    #expect(vertices[6].position.x > mesh.vertices[6].position.x)
+    #expect(vertices[6].position.y < mesh.vertices[6].position.y)
+    #expect(vertices[0].position.y > mesh.vertices[0].position.y)
+    #expect(vertices[8].curl == 0)
 }
 
-@Test("A left-hand page turn keeps the whole right edge on its spine")
-func leftPageTurnHinge() {
-    let mesh = PeelMesh(columns: 3, rows: 3)
-    let pose = PeelPose(corner: .bottomLeft, pull: .zero, progress: 0.5, lift: 1)
-    let vertices = mesh.deformed(for: pose)
-    #expect(vertices[2].position.x == mesh.vertices[2].position.x)
-    #expect(vertices[8].position.x == mesh.vertices[8].position.x)
-    #expect(vertices[0].position.x > mesh.vertices[0].position.x)
-    #expect(vertices[6].position.x == vertices[0].position.x)
-}
-
-@Test("A released page returns to exactly flat geometry")
-func flatPageGeometry() {
+@Test("A released corner returns to exactly flat geometry")
+func flatCornerGeometry() {
     let mesh = PeelMesh(columns: 5, rows: 4)
     #expect(mesh.deformed(for: .flat) == mesh.vertices)
 }
@@ -84,20 +117,57 @@ func previewCorners() {
     #expect(bottomLeft.y < topLeft.y)
 }
 
-@Test("Maximum page turn percentage limits rotation of the whole sheet")
-func maximumPageTurn() {
-    let mesh = PeelMesh(columns: 3, rows: 3)
+@Test("Maximum peel size limits the affected area")
+func maximumPeelReach() {
+    let mesh = PeelMesh(columns: 11, rows: 11)
     let pose = PeelPose(
         corner: .topRight,
         pull: PeelPoint(x: -0.5, y: -0.5),
         progress: 1,
         lift: 1
     )
-    let small = mesh.deformed(for: pose, maximumTurn: 0.2)
-    let large = mesh.deformed(for: pose, maximumTurn: 0.8)
-    #expect(small[2].position.x > large[2].position.x)
-    #expect(small[2].curl < large[2].curl)
-    #expect(large[2].position.x < mesh.vertices[0].position.x)
+    let small = mesh.deformed(for: pose, maximumReach: 0.2)
+    let large = mesh.deformed(for: pose, maximumReach: 0.8)
+    let pointInsideLargeOnly = 10 * 11 + 5
+    #expect(small[pointInsideLargeOnly].curl == 0)
+    #expect(large[pointInsideLargeOnly].curl > 0)
+}
+
+@Test("Native page curl renders a front and lower image for every corner")
+func nativePageCurlRenders() {
+    let extent = CGRect(x: 0, y: 0, width: 128, height: 80)
+    let front = CIImage(color: CIColor(red: 0.2, green: 0.7, blue: 0.7)).cropped(to: extent)
+    let lower = CIImage(color: CIColor(red: 0.9, green: 0.4, blue: 0.2)).cropped(to: extent)
+    let context = CIContext()
+
+    for corner in PeelCorner.allCases {
+        let output = PeelPageCurl.image(
+            front: front,
+            underneath: lower,
+            corner: corner,
+            progress: 0.5,
+            maximumSize: 1
+        )
+        #expect(output?.extent == extent)
+        if let output {
+            #expect(context.createCGImage(output, from: extent) != nil)
+        }
+    }
+}
+
+@Test("Page curl mirrors its upper-right origin to the selected corner")
+func pageCurlCornerTransforms() {
+    let extent = CGRect(x: 0, y: 0, width: 128, height: 80)
+    let upperRight = CGPoint(x: extent.width, y: extent.height)
+    let expected: [PeelCorner: CGPoint] = [
+        .topLeft: CGPoint(x: 0, y: 80),
+        .topRight: CGPoint(x: 128, y: 80),
+        .bottomLeft: CGPoint(x: 0, y: 0),
+        .bottomRight: CGPoint(x: 128, y: 0),
+    ]
+    for (corner, point) in expected {
+        #expect(upperRight.applying(PeelPageCurl.transform(for: corner, in: extent)) == point)
+    }
 }
 
 @Test("Lower snapshot uses centered cropping instead of stretching")
