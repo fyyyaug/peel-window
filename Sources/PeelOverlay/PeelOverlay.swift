@@ -12,9 +12,15 @@ public final class PeelDemoView: NSView {
     private let metalView: MTKView
     private let renderer: PeelMetalRenderer
     private let statusLabel = NSTextField(labelWithString: "")
-    private let hintLabel = NSTextField(labelWithString: "Drag the highlighted top-right corner")
+    private let hintLabel = NSTextField(labelWithString: "Drag an enabled window corner")
+    private let topLeftButton = NSButton(checkboxWithTitle: "Top left", target: nil, action: nil)
+    private let topRightButton = NSButton(checkboxWithTitle: "Top right", target: nil, action: nil)
+    private let bottomLeftButton = NSButton(checkboxWithTitle: "Bottom left", target: nil, action: nil)
+    private let bottomRightButton = NSButton(checkboxWithTitle: "Bottom right", target: nil, action: nil)
     private let strengthLabel = NSTextField(labelWithString: "Return strength: 1.00x")
     private let strengthSlider = NSSlider(value: 1, minValue: 0.25, maxValue: 2, target: nil, action: nil)
+    private let reachLabel = NSTextField(labelWithString: "Maximum peel size: 82%")
+    private let reachSlider = NSSlider(value: 0.82, minValue: 0.1, maxValue: 1, target: nil, action: nil)
     private let frontPopup = NSPopUpButton(frame: .zero, pullsDown: false)
     private let underneathPopup = NSPopUpButton(frame: .zero, pullsDown: false)
     private let refreshButton = NSButton(title: "Find Windows", target: nil, action: nil)
@@ -30,6 +36,18 @@ public final class PeelDemoView: NSView {
     private var dragPeakProgress = 0.0
     private var lastDragPeakProgress = 0.0
     private var showingSamplePair = false
+    private var capturedFrontImage: CGImage?
+    private var automaticUnderlays: [PeelCorner: CGImage] = [:]
+    private var usingAutomaticUnderlay = false
+
+    private var cornerButtons: [(PeelCorner, NSButton)] {
+        [(.topLeft, topLeftButton), (.topRight, topRightButton),
+         (.bottomLeft, bottomLeftButton), (.bottomRight, bottomRightButton)]
+    }
+
+    private var enabledCorners: [PeelCorner] {
+        cornerButtons.compactMap { $0.1.state == .on ? $0.0 : nil }
+    }
 
     public override init(frame frameRect: NSRect) {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -55,13 +73,15 @@ public final class PeelDemoView: NSView {
     private func configureView() {
         let savedStrength = UserDefaults.standard.object(forKey: "PeelReturnStrength") as? Double ?? 1
         strengthSlider.doubleValue = min(max(savedStrength, 0.25), 2)
+        let savedReach = UserDefaults.standard.object(forKey: "PeelMaximumReach") as? Double ?? 0.82
+        reachSlider.doubleValue = min(max(savedReach, 0.1), 1)
+        renderer.maximumReach = reachSlider.doubleValue
+        reachLabel.stringValue = String(format: "Maximum peel size: %.0f%%", reachSlider.doubleValue * 100)
         strengthLabel.stringValue = String(
             format: "Return strength: %.2fx",
             strengthSlider.doubleValue
         )
-        gestureMachine = PeelGestureMachine(
-            configuration: .reboundStrength(strengthSlider.doubleValue)
-        )
+        gestureMachine = PeelGestureMachine(configuration: gestureConfiguration())
 
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
@@ -73,6 +93,19 @@ public final class PeelDemoView: NSView {
         hintLabel.font = .systemFont(ofSize: 15, weight: .medium)
         hintLabel.textColor = .white
         addSubview(hintLabel)
+
+        let savedCorners = UserDefaults.standard.stringArray(forKey: "PeelEnabledCorners")
+        let selectedCorners = Set((savedCorners ?? [PeelCorner.topRight.rawValue])
+            .compactMap(PeelCorner.init(rawValue:)))
+        for (corner, button) in cornerButtons {
+            button.translatesAutoresizingMaskIntoConstraints = false
+            button.appearance = NSAppearance(named: .darkAqua)
+            button.state = selectedCorners.contains(corner) ? .on : .off
+            button.target = self
+            button.action = #selector(cornersChanged(_:))
+            addSubview(button)
+        }
+        if enabledCorners.isEmpty { topRightButton.state = .on }
 
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         statusLabel.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
@@ -88,6 +121,15 @@ public final class PeelDemoView: NSView {
         strengthSlider.target = self
         strengthSlider.action = #selector(strengthChanged(_:))
         addSubview(strengthSlider)
+
+        reachLabel.translatesAutoresizingMaskIntoConstraints = false
+        reachLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        reachLabel.textColor = .white
+        addSubview(reachLabel)
+        reachSlider.translatesAutoresizingMaskIntoConstraints = false
+        reachSlider.target = self
+        reachSlider.action = #selector(reachChanged(_:))
+        addSubview(reachSlider)
 
         frontPopup.translatesAutoresizingMaskIntoConstraints = false
         underneathPopup.translatesAutoresizingMaskIntoConstraints = false
@@ -124,13 +166,26 @@ public final class PeelDemoView: NSView {
             metalView.bottomAnchor.constraint(equalTo: bottomAnchor),
             hintLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
             hintLabel.topAnchor.constraint(equalTo: topAnchor, constant: 22),
+            topLeftButton.leadingAnchor.constraint(equalTo: hintLabel.leadingAnchor),
+            topLeftButton.topAnchor.constraint(equalTo: hintLabel.bottomAnchor, constant: 6),
+            topRightButton.leadingAnchor.constraint(equalTo: topLeftButton.trailingAnchor, constant: 12),
+            topRightButton.centerYAnchor.constraint(equalTo: topLeftButton.centerYAnchor),
+            bottomLeftButton.leadingAnchor.constraint(equalTo: topRightButton.trailingAnchor, constant: 12),
+            bottomLeftButton.centerYAnchor.constraint(equalTo: topLeftButton.centerYAnchor),
+            bottomRightButton.leadingAnchor.constraint(equalTo: bottomLeftButton.trailingAnchor, constant: 12),
+            bottomRightButton.centerYAnchor.constraint(equalTo: topLeftButton.centerYAnchor),
             statusLabel.leadingAnchor.constraint(equalTo: hintLabel.leadingAnchor),
-            statusLabel.topAnchor.constraint(equalTo: hintLabel.bottomAnchor, constant: 7),
+            statusLabel.topAnchor.constraint(equalTo: topLeftButton.bottomAnchor, constant: 7),
             strengthLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
             strengthLabel.topAnchor.constraint(equalTo: topAnchor, constant: 20),
             strengthSlider.trailingAnchor.constraint(equalTo: strengthLabel.trailingAnchor),
             strengthSlider.topAnchor.constraint(equalTo: strengthLabel.bottomAnchor, constant: 4),
             strengthSlider.widthAnchor.constraint(equalToConstant: 160),
+            reachLabel.trailingAnchor.constraint(equalTo: strengthLabel.trailingAnchor),
+            reachLabel.topAnchor.constraint(equalTo: strengthSlider.bottomAnchor, constant: 12),
+            reachSlider.trailingAnchor.constraint(equalTo: strengthLabel.trailingAnchor),
+            reachSlider.topAnchor.constraint(equalTo: reachLabel.bottomAnchor, constant: 4),
+            reachSlider.widthAnchor.constraint(equalToConstant: 160),
             frontPopup.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
             frontPopup.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -24),
             frontPopup.widthAnchor.constraint(equalToConstant: 240),
@@ -159,10 +214,34 @@ public final class PeelDemoView: NSView {
         strengthLabel.stringValue = String(format: "Return strength: %.2fx", sender.doubleValue)
         UserDefaults.standard.set(sender.doubleValue, forKey: "PeelReturnStrength")
         if gestureMachine.phase == .idle {
-            gestureMachine = PeelGestureMachine(
-                configuration: .reboundStrength(sender.doubleValue)
-            )
+            gestureMachine = PeelGestureMachine(configuration: gestureConfiguration())
         }
+    }
+
+    @objc private func reachChanged(_ sender: NSSlider) {
+        let reach = sender.doubleValue
+        reachLabel.stringValue = String(format: "Maximum peel size: %.0f%%", reach * 100)
+        UserDefaults.standard.set(reach, forKey: "PeelMaximumReach")
+        renderer.maximumReach = reach
+        if gestureMachine.phase == .idle {
+            gestureMachine = PeelGestureMachine(configuration: gestureConfiguration())
+        }
+        metalView.draw()
+    }
+
+    @objc private func cornersChanged(_ sender: NSButton) {
+        if enabledCorners.isEmpty {
+            sender.state = .on
+            captureStatusLabel.stringValue = "Keep at least one corner enabled."
+            return
+        }
+        UserDefaults.standard.set(enabledCorners.map(\.rawValue), forKey: "PeelEnabledCorners")
+    }
+
+    private func gestureConfiguration() -> PeelGestureConfiguration {
+        var configuration = PeelGestureConfiguration.reboundStrength(strengthSlider.doubleValue)
+        configuration.maximumDragDistance *= reachSlider.doubleValue / 0.82
+        return configuration
     }
 
     @objc private func refreshWindows() {
@@ -225,27 +304,50 @@ public final class PeelDemoView: NSView {
                 guard let frontWindow = windowCatalog.window(withID: frontID) else {
                     throw PeelCaptureError.windowUnavailable
                 }
-                let underneathID = autoDetectUnderneath
-                    ? windowStackResolver.windowBelow(sourceID: frontID, sourceFrame: frontWindow.frame)
-                    : selectedUnderneathID
                 let frontImage = try await snapshotter.capture(frontWindow)
                 var underneathImage: CGImage?
-                if let underneathID {
-                    if let underneathWindow = windowCatalog.window(withID: underneathID) {
+                var newAutomaticUnderlays: [PeelCorner: CGImage] = [:]
+                if autoDetectUnderneath {
+                    var capturedByID: [CGWindowID: CGImage] = [:]
+                    for corner in PeelCorner.allCases {
+                        guard let underneathID = windowStackResolver.windowBelow(
+                            sourceID: frontID,
+                            sourceFrame: frontWindow.frame,
+                            corner: corner
+                        ), let underneathWindow = windowCatalog.window(withID: underneathID) else {
+                            continue
+                        }
+                        let image: CGImage?
+                        if let cached = capturedByID[underneathID] {
+                            image = cached
+                        } else {
+                            image = try? await snapshotter.capture(underneathWindow)
+                        }
+                        if let image {
+                            capturedByID[underneathID] = image
+                            newAutomaticUnderlays[corner] = image
+                        }
+                    }
+                    underneathImage = newAutomaticUnderlays[enabledCorners.first ?? .topRight]
+                } else if let selectedUnderneathID {
+                    if let underneathWindow = windowCatalog.window(withID: selectedUnderneathID) {
                         underneathImage = try await snapshotter.capture(underneathWindow)
-                    } else if !autoDetectUnderneath {
+                    } else {
                         throw PeelCaptureError.windowUnavailable
                     }
                 }
                 try renderer.showSnapshots(front: frontImage, underneath: underneathImage)
+                capturedFrontImage = frontImage
+                automaticUnderlays = newAutomaticUnderlays
+                usingAutomaticUnderlay = autoDetectUnderneath
                 showingSamplePair = false
                 demoButton.title = "Sample Pair"
                 metalView.draw()
-                captureStatusLabel.stringValue = underneathImage != nil
-                    ? "Two snapshots ready. Drag to reveal the one underneath."
-                    : autoDetectUnderneath
-                        ? "No actual window at this corner. Showing the front snapshot."
-                        : "Front snapshot ready. Drag the highlighted corner."
+                captureStatusLabel.stringValue = autoDetectUnderneath
+                    ? "Front captured. Drag an enabled corner to reveal its actual lower window."
+                    : underneathImage != nil
+                        ? "Two snapshots ready. Drag an enabled corner to reveal the lower one."
+                        : "Front snapshot ready. Drag an enabled corner."
             } catch {
                 captureStatusLabel.stringValue = "Capture failed: \(error.localizedDescription)"
             }
@@ -254,6 +356,9 @@ public final class PeelDemoView: NSView {
 
     @objc private func showDemo() {
         do {
+            capturedFrontImage = nil
+            automaticUnderlays = [:]
+            usingAutomaticUnderlay = false
             if showingSamplePair {
                 try renderer.showSnapshots(front: nil, underneath: nil)
                 demoButton.title = "Sample Pair"
@@ -318,18 +423,30 @@ public final class PeelDemoView: NSView {
                 x: point.x - translation.x,
                 y: point.y - translation.y
             )
-            let cornerPoint = renderer.topRightCorner(in: bounds.size)
-            guard hypot(startPoint.x - cornerPoint.x, startPoint.y - cornerPoint.y) <= 110 else {
+            let nearestCorner = enabledCorners.map { corner in
+                let cornerPoint = renderer.corner(corner, in: bounds.size)
+                return (corner, hypot(startPoint.x - cornerPoint.x, startPoint.y - cornerPoint.y))
+            }.min { $0.1 < $1.1 }
+            guard let (corner, distance) = nearestCorner, distance <= 110 else {
                 recognizer.isEnabled = false
                 recognizer.isEnabled = true
                 return
             }
+            if usingAutomaticUnderlay, let capturedFrontImage {
+                do {
+                    let underneath = automaticUnderlays[corner]
+                    try renderer.showSnapshots(front: capturedFrontImage, underneath: underneath)
+                    captureStatusLabel.stringValue = underneath == nil
+                        ? "No actual lower window at this corner."
+                        : "Actual lower window ready for this corner."
+                } catch {
+                    captureStatusLabel.stringValue = "Unable to show this corner: \(error.localizedDescription)"
+                }
+            }
             stopSettlementTimer()
-            gestureMachine = PeelGestureMachine(
-                configuration: .reboundStrength(strengthSlider.doubleValue)
-            )
+            gestureMachine = PeelGestureMachine(configuration: gestureConfiguration())
             gestureMachine.begin(
-                corner: .topRight,
+                corner: corner,
                 at: PeelPoint(x: startPoint.x, y: startPoint.y),
                 timestamp: timestamp
             )

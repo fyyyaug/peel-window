@@ -5,7 +5,8 @@ an obscured window by lifting a corner of the window above it.
 
 The intended interaction is temporary: while the user holds a peeled corner,
 the window directly underneath becomes visible; releasing the pointer restores
-the original view. The user can adjust and retain the return strength.
+the original view. The user can choose active corners, maximum peel size, and
+return strength; these settings persist across launches.
 
 The first milestone is intentionally narrow: make the peel gesture feel
 immediate, physical, and visually convincing before integrating with arbitrary
@@ -37,18 +38,21 @@ permissions, and lifecycle.
 - Native macOS Xcode app created in `App/PeelWindow`
 - Local Swift package connected to the app target
 - Synthetic Metal window mesh renders in the app
-- Top-right drag, normalized peel pose, and spring return are implemented
-- Eleven package tests cover geometry, interaction, mesh deformation,
-  aspect-preserving preview layout, and lower-window selection
-- Return strength can be adjusted in the app and persists across launches
+- Four independently enabled corners, normalized peel pose, and spring return
+  are implemented in the preview
+- Fourteen package tests cover geometry, interaction, mesh deformation,
+  aspect-preserving preview layout, and per-corner lower-window selection
+- Maximum peel size (10–100% reach along the preview edges) and return
+  strength (0.25–2×) can be adjusted and persist across launches
 - ScreenCaptureKit window discovery and still-image capture are wired into the
   app through an explicit Find Windows action
 - The app can display a local sample pair or selected front/underneath window
   snapshots without stretching them; the true desktop overlay is a later
   milestone
 - Real dual-window capture and the peel gesture have been checked on a Mac
-- An opt-in Auto-detect choice can probe the actual window below the curled
-  corner; the desktop overlay and live reveal remain future work
+- An opt-in Auto-detect choice probes each corner separately and selects its
+  lower snapshot when that corner is dragged; the desktop overlay and live
+  reveal remain future work
 
 See [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md) and
 [Docs/ROADMAP.md](Docs/ROADMAP.md) for the working plan.

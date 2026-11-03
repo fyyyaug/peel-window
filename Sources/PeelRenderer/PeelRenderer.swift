@@ -64,19 +64,20 @@ public struct PeelMesh: Sendable {
         self.indices = indices
     }
 
-    public func deformed(for pose: PeelPose) -> [PeelVertex] {
-        vertices.map { vertex in
+    public func deformed(for pose: PeelPose, maximumReach: Double = 0.82) -> [PeelVertex] {
+        let reach = maximumReach.clamped(to: 0.1...1)
+        return vertices.map { vertex in
             var result = vertex
             let u = Double(vertex.textureCoordinate.x)
             let v = Double(vertex.textureCoordinate.y)
             let corner = pose.corner.unitPoint
             let distance = hypot(u - corner.x, v - corner.y)
-            let linearInfluence = (1 - distance / 0.82).clamped(to: 0...1)
+            let linearInfluence = (1 - distance / reach).clamped(to: 0...1)
             let influence = linearInfluence * linearInfluence * (3 - 2 * linearInfluence)
             let curl = sin(influence * .pi / 2) * pose.lift
 
-            result.position.x += Float(pose.pull.x * influence * 0.72)
-            result.position.y += Float(pose.pull.y * influence * 0.72)
+            result.position.x += Float(pose.pull.x * influence * 0.72 * reach / 0.82)
+            result.position.y += Float(pose.pull.y * influence * 0.72 * reach / 0.82)
             result.position.z = Float(curl * 0.62)
             result.curl = Float(curl)
             return result
@@ -87,6 +88,9 @@ public struct PeelMesh: Sendable {
 @MainActor
 public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     public var pose: PeelPose = .flat {
+        didSet { rebuildVertexBuffer() }
+    }
+    public var maximumReach: Double = 0.82 {
         didSet { rebuildVertexBuffer() }
     }
 
@@ -169,9 +173,9 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         updateLayout()
     }
 
-    public func topRightCorner(in viewSize: CGSize) -> CGPoint {
+    public func corner(_ corner: PeelCorner, in viewSize: CGSize) -> CGPoint {
         PeelPreviewLayout(viewSize: viewSize, imageSize: imageSize)
-            .topRightCorner(in: viewSize)
+            .corner(corner, in: viewSize)
     }
 
     public func showSnapshots(front: CGImage?, underneath: CGImage?) throws {
@@ -264,7 +268,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
 
     private func rebuildVertexBuffer() {
         guard let previewLayout else { return }
-        let vertices = mesh.deformed(for: pose).map { vertex in
+        let vertices = mesh.deformed(for: pose, maximumReach: maximumReach).map { vertex in
             var result = vertex
             result.position = previewLayout.position(vertex.position)
             return result

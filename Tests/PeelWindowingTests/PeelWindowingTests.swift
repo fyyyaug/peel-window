@@ -1,5 +1,6 @@
 import CoreGraphics
 import Testing
+import PeelCore
 @testable import PeelWindowing
 
 @Test("Automatic lower-window selection respects stacking and the curled corner")
@@ -32,4 +33,26 @@ func uncoveredCornerHasNoWindow() {
         orderedWindows: windows,
         excludingPID: 99
     ) == nil)
+}
+
+@Test("Automatic lower-window selection probes each chosen corner")
+func choosesWindowForEachCorner() {
+    let source = CGRect(x: 100, y: 100, width: 600, height: 400)
+    let windows = [
+        PeelStackWindow(id: 21, frame: CGRect(x: 100, y: 100, width: 100, height: 100), layer: 0, alpha: 1, ownerPID: 2),
+        PeelStackWindow(id: 22, frame: CGRect(x: 600, y: 100, width: 100, height: 100), layer: 0, alpha: 1, ownerPID: 2),
+        PeelStackWindow(id: 23, frame: CGRect(x: 100, y: 400, width: 100, height: 100), layer: 0, alpha: 1, ownerPID: 2),
+        PeelStackWindow(id: 24, frame: CGRect(x: 600, y: 400, width: 100, height: 100), layer: 0, alpha: 1, ownerPID: 2),
+    ]
+    let expected: [PeelCorner: CGWindowID] = [
+        .topLeft: 21, .topRight: 22, .bottomLeft: 23, .bottomRight: 24,
+    ]
+    for (corner, id) in expected {
+        #expect(PeelWindowStack.firstWindowBelow(
+            sourceFrame: source,
+            orderedWindows: windows,
+            excludingPID: 99,
+            corner: corner
+        ) == id)
+    }
 }

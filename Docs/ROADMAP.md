@@ -13,11 +13,13 @@ the package test targets run with the full Xcode testing runtime.
 ## M1 — Synthetic peel prototype
 
 - [x] Render a static sample window surface.
-- [x] Detect a drag from the highlighted top-right corner.
+- [x] Detect a drag from any enabled corner in the preview.
 - [x] Deform a small Metal mesh from flat to peeled.
 - [x] Settle back with a tunable spring animation.
 - [x] Display phase, peel progress, and frame time.
 - [x] Let the user adjust and retain the return strength.
+- [x] Let the user choose enabled corners and maximum peel reach as a
+      percentage of the preview window's edges; retain both settings.
 - [ ] Tune the deformation until the interaction reads as a paper-like curl.
 
 Exit condition: a short screen recording makes the interaction immediately
@@ -45,7 +47,8 @@ content handling remain open.
 ## M3 — Desktop overlay illusion
 
 - [x] Add an opt-in stack-order probe for the window directly under the curled
-      corner, with manual lower-window selection still available.
+      corner, independently for all four corners, with manual lower-window
+      selection still available.
 - [ ] Add the transparent borderless overlay.
 - [ ] Route pointer input without trapping the user.
 - [ ] Coordinate source-window visibility and overlay teardown.
@@ -69,7 +72,7 @@ Exit condition: a stable 10–20 second demonstration is ready for a portfolio.
 ## Explicitly deferred
 
 - Multi-display and mixed-scale correctness
-- Every corner and arbitrary peel directions
+- Arbitrary peel directions beyond the four corners
 - Continuous live capture while peeling
 - Distribution outside local development
 - Windows or Linux implementations

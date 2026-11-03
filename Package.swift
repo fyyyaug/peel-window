@@ -58,7 +58,7 @@ let package = Package(
         ),
         .testTarget(
             name: "PeelWindowingTests",
-            dependencies: ["PeelWindowing"]
+            dependencies: ["PeelCore", "PeelWindowing"]
         ),
     ]
 )

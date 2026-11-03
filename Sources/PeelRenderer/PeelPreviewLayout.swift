@@ -1,4 +1,5 @@
 import CoreGraphics
+import PeelCore
 
 /// Keeps a captured window's proportions inside the preview's safe drawing area.
 public struct PeelPreviewLayout: Equatable, Sendable {
@@ -22,10 +23,11 @@ public struct PeelPreviewLayout: Equatable, Sendable {
         }
     }
 
-    public func topRightCorner(in viewSize: CGSize) -> CGPoint {
-        CGPoint(
-            x: Double(viewSize.width) * (1 + halfWidth) / 2,
-            y: Double(viewSize.height) * (1 + halfHeight) / 2
+    public func corner(_ corner: PeelCorner, in viewSize: CGSize) -> CGPoint {
+        let unit = corner.unitPoint
+        return CGPoint(
+            x: Double(viewSize.width) * (1 + (unit.x == 0 ? -halfWidth : halfWidth)) / 2,
+            y: Double(viewSize.height) * (1 + (unit.y == 0 ? -halfHeight : halfHeight)) / 2
         )
     }
 

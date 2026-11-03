@@ -1,7 +1,7 @@
 /// Namespace for the platform-light domain module.
 public enum PeelCoreModule {}
 
-public enum PeelCorner: String, CaseIterable, Sendable {
+public enum PeelCorner: String, CaseIterable, Hashable, Sendable {
     case topLeft
     case topRight
     case bottomLeft

@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import PeelCore
 
 public struct PeelStackWindow: Equatable, Sendable {
     public let id: CGWindowID
@@ -23,12 +24,17 @@ public enum PeelWindowStack {
     public static func firstWindowBelow(
         sourceFrame: CGRect,
         orderedWindows: [PeelStackWindow],
-        excludingPID: Int32
+        excludingPID: Int32,
+        corner: PeelCorner = .topRight
     ) -> CGWindowID? {
         guard sourceFrame.width > 0, sourceFrame.height > 0 else { return nil }
         let inset = min(80, max(24, min(sourceFrame.width, sourceFrame.height) * 0.1))
         // Core Graphics global window bounds use a top-left screen origin.
-        let probe = CGPoint(x: sourceFrame.maxX - inset, y: sourceFrame.minY + inset)
+        let unit = corner.unitPoint
+        let probe = CGPoint(
+            x: unit.x == 0 ? sourceFrame.minX + inset : sourceFrame.maxX - inset,
+            y: unit.y == 1 ? sourceFrame.minY + inset : sourceFrame.maxY - inset
+        )
         return orderedWindows.first { window in
             window.layer == 0 &&
                 window.alpha > 0.01 &&
@@ -42,7 +48,11 @@ public enum PeelWindowStack {
 public final class PeelWindowStackResolver {
     public init() {}
 
-    public func windowBelow(sourceID: CGWindowID, sourceFrame: CGRect) -> CGWindowID? {
+    public func windowBelow(
+        sourceID: CGWindowID,
+        sourceFrame: CGRect,
+        corner: PeelCorner = .topRight
+    ) -> CGWindowID? {
         let options: CGWindowListOption = [
             .optionOnScreenBelowWindow,
             .excludeDesktopElements,
@@ -72,7 +82,8 @@ public final class PeelWindowStackResolver {
         return PeelWindowStack.firstWindowBelow(
             sourceFrame: sourceFrame,
             orderedWindows: windows,
-            excludingPID: ProcessInfo.processInfo.processIdentifier
+            excludingPID: ProcessInfo.processInfo.processIdentifier,
+            corner: corner
         )
     }
 }

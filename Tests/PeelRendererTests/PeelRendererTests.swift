@@ -41,9 +41,42 @@ func previewKeepsAspectRatio() {
         #expect(abs(displayedAspect - imageAspect) < 0.000_001)
         #expect(layout.halfWidth <= 0.88)
         #expect(layout.halfHeight <= 0.72)
-        let corner = layout.topRightCorner(in: view)
+        let corner = layout.corner(.topRight, in: view)
         #expect(corner.x > view.width / 2 && corner.y > view.height / 2)
     }
+}
+
+@Test("Every corner maps to the corresponding preview corner")
+func previewCorners() {
+    let size = CGSize(width: 1000, height: 700)
+    let layout = PeelPreviewLayout(viewSize: size, imageSize: CGSize(width: 800, height: 500))
+    let topLeft = layout.corner(.topLeft, in: size)
+    let topRight = layout.corner(.topRight, in: size)
+    let bottomLeft = layout.corner(.bottomLeft, in: size)
+    let bottomRight = layout.corner(.bottomRight, in: size)
+
+    #expect(topLeft.x == bottomLeft.x)
+    #expect(topRight.x == bottomRight.x)
+    #expect(topLeft.y == topRight.y)
+    #expect(bottomLeft.y == bottomRight.y)
+    #expect(topLeft.x < topRight.x)
+    #expect(bottomLeft.y < topLeft.y)
+}
+
+@Test("Maximum peel size limits the affected area")
+func maximumPeelReach() {
+    let mesh = PeelMesh(columns: 11, rows: 11)
+    let pose = PeelPose(
+        corner: .topRight,
+        pull: PeelPoint(x: -0.5, y: -0.5),
+        progress: 1,
+        lift: 1
+    )
+    let small = mesh.deformed(for: pose, maximumReach: 0.2)
+    let large = mesh.deformed(for: pose, maximumReach: 0.8)
+    let pointInsideLargeOnly = 10 * 11 + 5
+    #expect(small[pointInsideLargeOnly].curl == 0)
+    #expect(large[pointInsideLargeOnly].curl > 0)
 }
 
 @Test("Lower snapshot uses centered cropping instead of stretching")
