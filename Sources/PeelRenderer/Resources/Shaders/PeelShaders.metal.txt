@@ -20,11 +20,7 @@ vertex RasterData peelVertex(
     PeelVertex input = vertices[vertexID];
     RasterData output;
 
-    float perspective = 1.0 - input.position.z * 0.20;
-    float2 projected = input.position.xy * perspective;
-    projected.y += input.position.z * 0.15;
-
-    output.position = float4(projected, 0.0, 1.0);
+    output.position = float4(input.position.xy, 0.0, 1.0);
     output.textureCoordinate = input.textureCoordinate;
     output.curl = input.curl;
     return output;
@@ -38,18 +34,15 @@ fragment float4 peelFragment(RasterData input [[stage_in]]) {
     float titleBar = smoothstep(0.83, 0.86, input.textureCoordinate.y);
     color = mix(color, float3(0.16, 0.20, 0.31), titleBar);
 
-    float cornerDistance = distance(input.textureCoordinate, float2(1.0, 1.0));
-    float cornerHighlight = 1.0 - smoothstep(0.025, 0.09, cornerDistance);
-    color = mix(color, float3(1.0, 0.48, 0.22), cornerHighlight);
-
     float edgeX = min(input.textureCoordinate.x, 1.0 - input.textureCoordinate.x);
     float edgeY = min(input.textureCoordinate.y, 1.0 - input.textureCoordinate.y);
     float edge = smoothstep(0.0, 0.018, min(edgeX, edgeY));
     color *= mix(0.68, 1.0, edge);
 
-    float light = 1.0 + input.curl * 0.28;
-    float shadow = 1.0 - input.curl * input.curl * 0.18;
-    return float4(color * light * shadow, 1.0);
+    float backside = smoothstep(0.49, 0.51, input.curl);
+    color = mix(color, float3(0.88, 0.84, 0.76), backside);
+    float light = 1.0 - 0.16 * sin(input.curl * 3.14159265);
+    return float4(color * light, 1.0);
 }
 
 fragment float4 peelSnapshotFragment(
@@ -58,12 +51,10 @@ fragment float4 peelSnapshotFragment(
 ) {
     constexpr sampler imageSampler(filter::linear, address::clamp_to_edge);
     float3 color = snapshot.sample(imageSampler, input.textureCoordinate).rgb;
-    float cornerDistance = distance(input.textureCoordinate, float2(1.0, 1.0));
-    float highlight = 1.0 - smoothstep(0.025, 0.09, cornerDistance);
-    color = mix(color, float3(1.0, 0.48, 0.22), highlight * 0.55);
-    float light = 1.0 + input.curl * 0.28;
-    float shadow = 1.0 - input.curl * input.curl * 0.18;
-    return float4(color * light * shadow, 1.0);
+    float backside = smoothstep(0.49, 0.51, input.curl);
+    color = mix(color, float3(0.88, 0.84, 0.76), backside);
+    float light = 1.0 - 0.16 * sin(input.curl * 3.14159265);
+    return float4(color * light, 1.0);
 }
 
 fragment float4 peelUnderlayFragment(

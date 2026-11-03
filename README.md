@@ -1,14 +1,14 @@
 # Peel Window
 
 Peel Window is a native macOS interaction prototype for temporarily revealing
-an obscured window by lifting a corner of the window above it.
+an obscured window by turning the window above it like a book page.
 
-The intended interaction is temporary: while the user holds a peeled corner,
+The intended interaction is temporary: while the user turns a page inward,
 the window directly underneath becomes visible; releasing the pointer restores
 the original view. The user can choose active corners, maximum peel size, and
 return strength; these settings persist across launches.
 
-The first milestone is intentionally narrow: make the peel gesture feel
+The first milestone is intentionally narrow: make the page-turn gesture feel
 immediate, physical, and visually convincing before integrating with arbitrary
 macOS windows.
 
@@ -37,12 +37,13 @@ permissions, and lifecycle.
 - Architecture scaffold created
 - Native macOS Xcode app created in `App/PeelWindow`
 - Local Swift package connected to the app target
-- Synthetic Metal window mesh renders in the app
-- Four independently enabled corners, normalized peel pose, and spring return
+- Synthetic Metal window mesh renders in the app and turns as a whole page
+  around the opposite edge from the grabbed corner
+- Four independently enabled corners, inward-only page turns, and spring return
   are implemented in the preview
-- Fourteen package tests cover geometry, interaction, mesh deformation,
+- Seventeen package tests cover geometry, interaction, page-turn deformation,
   aspect-preserving preview layout, and per-corner lower-window selection
-- Maximum peel size (10–100% reach along the preview edges) and return
+- Maximum page turn (10–100% of a 180° turn) and return
   strength (0.25–2×) can be adjusted and persist across launches
 - ScreenCaptureKit window discovery and still-image capture are wired into the
   app through an explicit Find Windows action

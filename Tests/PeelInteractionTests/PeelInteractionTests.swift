@@ -24,12 +24,27 @@ func draggingProducesPose() {
         at: PeelPoint(x: 100, y: 100),
         timestamp: 0
     )
-    machine.update(to: PeelPoint(x: 40, y: 20), timestamp: 0.1)
+    machine.update(to: PeelPoint(x: 0, y: 20), timestamp: 0.1)
 
     #expect(machine.phase == .dragging)
     #expect(abs(machine.pose.progress - 1) < 0.000_001)
     #expect(machine.pose.pull.length <= 1.000_001)
     #expect(machine.pose.lift > 0.99)
+}
+
+@Test("A page only turns when dragged inward from its free edge")
+func pageTurnDirection() {
+    var right = PeelGestureMachine(configuration: .init(maximumDragDistance: 100))
+    right.begin(corner: .bottomRight, at: PeelPoint(x: 100, y: 100), timestamp: 0)
+    right.update(to: PeelPoint(x: 140, y: 0), timestamp: 0.1)
+    #expect(right.pose.progress == 0)
+    right.update(to: PeelPoint(x: 50, y: 0), timestamp: 0.2)
+    #expect(right.pose.progress == 0.5)
+
+    var left = PeelGestureMachine(configuration: .init(maximumDragDistance: 100))
+    left.begin(corner: .topLeft, at: PeelPoint(x: 100, y: 100), timestamp: 0)
+    left.update(to: PeelPoint(x: 150, y: 200), timestamp: 0.1)
+    #expect(left.pose.progress == 0.5)
 }
 
 @Test("Released peel settles back to the flat state")

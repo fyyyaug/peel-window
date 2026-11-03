@@ -11,8 +11,8 @@ func meshTopology() {
     #expect(mesh.indices.count == 36)
 }
 
-@Test("The selected corner receives more curl than its opposite corner")
-func cornerCurlFalloff() {
+@Test("A right-hand page turn keeps the whole left edge on its spine")
+func rightPageTurnHinge() {
     let mesh = PeelMesh(columns: 3, rows: 3)
     let pose = PeelPose(
         corner: .topRight,
@@ -22,11 +22,32 @@ func cornerCurlFalloff() {
     )
     let vertices = mesh.deformed(for: pose)
     let bottomLeft = vertices[0]
+    let topLeft = vertices[6]
+    let bottomRight = vertices[2]
     let topRight = vertices[8]
 
-    #expect(topRight.position.z > bottomLeft.position.z)
-    #expect(topRight.curl > 0.8)
-    #expect(bottomLeft.curl == 0)
+    #expect(bottomLeft.position.x == mesh.vertices[0].position.x)
+    #expect(topLeft.position.x == mesh.vertices[6].position.x)
+    #expect(bottomRight.position.x == topRight.position.x)
+    #expect(bottomRight.position.z > bottomLeft.position.z)
+    #expect(topRight.position.z == bottomRight.position.z)
+}
+
+@Test("A left-hand page turn keeps the whole right edge on its spine")
+func leftPageTurnHinge() {
+    let mesh = PeelMesh(columns: 3, rows: 3)
+    let pose = PeelPose(corner: .bottomLeft, pull: .zero, progress: 0.5, lift: 1)
+    let vertices = mesh.deformed(for: pose)
+    #expect(vertices[2].position.x == mesh.vertices[2].position.x)
+    #expect(vertices[8].position.x == mesh.vertices[8].position.x)
+    #expect(vertices[0].position.x > mesh.vertices[0].position.x)
+    #expect(vertices[6].position.x == vertices[0].position.x)
+}
+
+@Test("A released page returns to exactly flat geometry")
+func flatPageGeometry() {
+    let mesh = PeelMesh(columns: 5, rows: 4)
+    #expect(mesh.deformed(for: .flat) == mesh.vertices)
 }
 
 @Test("Preview preserves landscape and portrait image proportions")
@@ -63,20 +84,20 @@ func previewCorners() {
     #expect(bottomLeft.y < topLeft.y)
 }
 
-@Test("Maximum peel size limits the affected area")
-func maximumPeelReach() {
-    let mesh = PeelMesh(columns: 11, rows: 11)
+@Test("Maximum page turn percentage limits rotation of the whole sheet")
+func maximumPageTurn() {
+    let mesh = PeelMesh(columns: 3, rows: 3)
     let pose = PeelPose(
         corner: .topRight,
         pull: PeelPoint(x: -0.5, y: -0.5),
         progress: 1,
         lift: 1
     )
-    let small = mesh.deformed(for: pose, maximumReach: 0.2)
-    let large = mesh.deformed(for: pose, maximumReach: 0.8)
-    let pointInsideLargeOnly = 10 * 11 + 5
-    #expect(small[pointInsideLargeOnly].curl == 0)
-    #expect(large[pointInsideLargeOnly].curl > 0)
+    let small = mesh.deformed(for: pose, maximumTurn: 0.2)
+    let large = mesh.deformed(for: pose, maximumTurn: 0.8)
+    #expect(small[2].position.x > large[2].position.x)
+    #expect(small[2].curl < large[2].curl)
+    #expect(large[2].position.x < mesh.vertices[0].position.x)
 }
 
 @Test("Lower snapshot uses centered cropping instead of stretching")

@@ -12,14 +12,14 @@ public final class PeelDemoView: NSView {
     private let metalView: MTKView
     private let renderer: PeelMetalRenderer
     private let statusLabel = NSTextField(labelWithString: "")
-    private let hintLabel = NSTextField(labelWithString: "Drag an enabled window corner")
+    private let hintLabel = NSTextField(labelWithString: "Drag an enabled corner inward to turn the page")
     private let topLeftButton = NSButton(checkboxWithTitle: "Top left", target: nil, action: nil)
     private let topRightButton = NSButton(checkboxWithTitle: "Top right", target: nil, action: nil)
     private let bottomLeftButton = NSButton(checkboxWithTitle: "Bottom left", target: nil, action: nil)
     private let bottomRightButton = NSButton(checkboxWithTitle: "Bottom right", target: nil, action: nil)
     private let strengthLabel = NSTextField(labelWithString: "Return strength: 1.00x")
     private let strengthSlider = NSSlider(value: 1, minValue: 0.25, maxValue: 2, target: nil, action: nil)
-    private let reachLabel = NSTextField(labelWithString: "Maximum peel size: 82%")
+    private let reachLabel = NSTextField(labelWithString: "Maximum page turn: 82%")
     private let reachSlider = NSSlider(value: 0.82, minValue: 0.1, maxValue: 1, target: nil, action: nil)
     private let frontPopup = NSPopUpButton(frame: .zero, pullsDown: false)
     private let underneathPopup = NSPopUpButton(frame: .zero, pullsDown: false)
@@ -73,10 +73,12 @@ public final class PeelDemoView: NSView {
     private func configureView() {
         let savedStrength = UserDefaults.standard.object(forKey: "PeelReturnStrength") as? Double ?? 1
         strengthSlider.doubleValue = min(max(savedStrength, 0.25), 2)
-        let savedReach = UserDefaults.standard.object(forKey: "PeelMaximumReach") as? Double ?? 0.82
+        let savedReach = UserDefaults.standard.object(forKey: "PeelMaximumTurn") as? Double
+            ?? UserDefaults.standard.object(forKey: "PeelMaximumReach") as? Double
+            ?? 0.82
         reachSlider.doubleValue = min(max(savedReach, 0.1), 1)
-        renderer.maximumReach = reachSlider.doubleValue
-        reachLabel.stringValue = String(format: "Maximum peel size: %.0f%%", reachSlider.doubleValue * 100)
+        renderer.maximumTurn = reachSlider.doubleValue
+        reachLabel.stringValue = String(format: "Maximum page turn: %.0f%%", reachSlider.doubleValue * 100)
         strengthLabel.stringValue = String(
             format: "Return strength: %.2fx",
             strengthSlider.doubleValue
@@ -220,9 +222,9 @@ public final class PeelDemoView: NSView {
 
     @objc private func reachChanged(_ sender: NSSlider) {
         let reach = sender.doubleValue
-        reachLabel.stringValue = String(format: "Maximum peel size: %.0f%%", reach * 100)
-        UserDefaults.standard.set(reach, forKey: "PeelMaximumReach")
-        renderer.maximumReach = reach
+        reachLabel.stringValue = String(format: "Maximum page turn: %.0f%%", reach * 100)
+        UserDefaults.standard.set(reach, forKey: "PeelMaximumTurn")
+        renderer.maximumTurn = reach
         if gestureMachine.phase == .idle {
             gestureMachine = PeelGestureMachine(configuration: gestureConfiguration())
         }
@@ -344,10 +346,10 @@ public final class PeelDemoView: NSView {
                 demoButton.title = "Sample Pair"
                 metalView.draw()
                 captureStatusLabel.stringValue = autoDetectUnderneath
-                    ? "Front captured. Drag an enabled corner to reveal its actual lower window."
+                    ? "Front captured. Turn an enabled corner inward to reveal its lower window."
                     : underneathImage != nil
-                        ? "Two snapshots ready. Drag an enabled corner to reveal the lower one."
-                        : "Front snapshot ready. Drag an enabled corner."
+                        ? "Two snapshots ready. Turn an enabled corner inward."
+                        : "Front snapshot ready. Turn an enabled corner inward."
             } catch {
                 captureStatusLabel.stringValue = "Capture failed: \(error.localizedDescription)"
             }
@@ -369,7 +371,7 @@ public final class PeelDemoView: NSView {
                     underneath: makeSampleImage(underneath: true)
                 )
                 demoButton.title = "Synthetic"
-                captureStatusLabel.stringValue = "Sample pair ready. Drag to reveal the lower sample."
+                captureStatusLabel.stringValue = "Sample pair ready. Turn a corner inward to reveal the lower page."
             }
             showingSamplePair.toggle()
             metalView.draw()
@@ -501,7 +503,7 @@ public final class PeelDemoView: NSView {
         renderer.pose = gestureMachine.pose
         metalView.draw()
         statusLabel.stringValue = String(
-            format: "phase: %@   peel: %.2f   last drag: %.2f   frame: %.1f ms",
+            format: "phase: %@   turn: %.2f   last drag: %.2f   frame: %.1f ms",
             String(describing: gestureMachine.phase),
             gestureMachine.pose.progress,
             lastDragPeakProgress,

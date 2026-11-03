@@ -64,22 +64,21 @@ public struct PeelMesh: Sendable {
         self.indices = indices
     }
 
-    public func deformed(for pose: PeelPose, maximumReach: Double = 0.82) -> [PeelVertex] {
-        let reach = maximumReach.clamped(to: 0.1...1)
+    /// Turns the entire sheet about the edge opposite the grabbed corner.
+    /// A right-hand grab uses the left edge as the book spine, and vice versa.
+    public func deformed(for pose: PeelPose, maximumTurn: Double = 0.82) -> [PeelVertex] {
+        let turnFraction = maximumTurn.clamped(to: 0.1...1)
+        let angle = pose.progress * turnFraction * .pi
+        let hingeX = pose.corner.unitPoint.x == 1 ? -0.88 : 0.88
         return vertices.map { vertex in
             var result = vertex
-            let u = Double(vertex.textureCoordinate.x)
-            let v = Double(vertex.textureCoordinate.y)
-            let corner = pose.corner.unitPoint
-            let distance = hypot(u - corner.x, v - corner.y)
-            let linearInfluence = (1 - distance / reach).clamped(to: 0...1)
-            let influence = linearInfluence * linearInfluence * (3 - 2 * linearInfluence)
-            let curl = sin(influence * .pi / 2) * pose.lift
-
-            result.position.x += Float(pose.pull.x * influence * 0.72 * reach / 0.82)
-            result.position.y += Float(pose.pull.y * influence * 0.72 * reach / 0.82)
-            result.position.z = Float(curl * 0.62)
-            result.curl = Float(curl)
+            let distanceFromSpine = Double(vertex.position.x) - hingeX
+            let depth = abs(distanceFromSpine) * sin(angle) * 0.36
+            let perspective = 1 / (1 + depth * 0.16)
+            result.position.x = Float(hingeX + distanceFromSpine * cos(angle) * perspective)
+            result.position.y = Float(Double(vertex.position.y) * (1 - depth * 0.04))
+            result.position.z = Float(depth)
+            result.curl = Float(angle / .pi)
             return result
         }
     }
@@ -90,7 +89,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     public var pose: PeelPose = .flat {
         didSet { rebuildVertexBuffer() }
     }
-    public var maximumReach: Double = 0.82 {
+    public var maximumTurn: Double = 0.82 {
         didSet { rebuildVertexBuffer() }
     }
 
@@ -268,7 +267,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
 
     private func rebuildVertexBuffer() {
         guard let previewLayout else { return }
-        let vertices = mesh.deformed(for: pose, maximumReach: maximumReach).map { vertex in
+        let vertices = mesh.deformed(for: pose, maximumTurn: maximumTurn).map { vertex in
             var result = vertex
             result.position = previewLayout.position(vertex.position)
             return result
