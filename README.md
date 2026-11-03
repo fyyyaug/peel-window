@@ -42,10 +42,13 @@ permissions, and lifecycle.
   toward the other corner on the same side
 - Four independently enabled corners and spring return are implemented in the
   preview; the switches choose where a drag can start, not where the fold ends
-- Twenty-one package tests cover geometry, interaction, page-curl orientation,
+- Horizontal pointer travel controls how much page is revealed, including
+  closing it again during the same drag; the first part of a drag is gentler
+- Twenty-three package tests cover geometry, interaction, page-curl orientation,
   aspect-preserving preview layout, and per-corner lower-window selection
 - Maximum peel size (10–100% reach along the preview edges) and return
-  strength (0.25–2×) can be adjusted and persist across launches
+  strength (0.25–2×) can be adjusted and persist across launches; peel size
+  does not change drag sensitivity
 - ScreenCaptureKit window discovery and still-image capture are wired into the
   app through an explicit Find Windows action
 - The app opens with a local sample pair and a 50% curl preview, or can display selected front/underneath window

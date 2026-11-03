@@ -39,8 +39,9 @@ func bottomCornerGestures() {
         machine.begin(corner: corner, at: PeelPoint(x: 100, y: 100), timestamp: 0)
         machine.update(to: PeelPoint(x: targetX, y: 150), timestamp: 0.1)
         #expect(machine.pose.corner == corner)
-        #expect(machine.pose.progress > 0.7)
-        #expect(machine.pose.lift > 0.8)
+        #expect(machine.pose.progress > 0.35)
+        #expect(machine.pose.progress < 0.4)
+        #expect(machine.pose.lift > 0.5)
     }
 }
 
@@ -58,6 +59,36 @@ func outwardCornerGestures() {
         #expect(machine.pose.progress == 0)
         #expect(machine.pose.pull == .zero)
     }
+}
+
+@Test("Horizontal movement can open and close a curl during one drag")
+func horizontalMovementControlsCurl() {
+    var machine = PeelGestureMachine(configuration: .init(maximumDragDistance: 100))
+    machine.begin(corner: .topRight, at: PeelPoint(x: 100, y: 100), timestamp: 0)
+    machine.update(to: PeelPoint(x: 60, y: 20), timestamp: 0.1)
+    let firstProgress = machine.pose.progress
+    machine.update(to: PeelPoint(x: 20, y: 20), timestamp: 0.2)
+    let deeperProgress = machine.pose.progress
+    machine.update(to: PeelPoint(x: 80, y: 20), timestamp: 0.3)
+    #expect(firstProgress > 0)
+    #expect(deeperProgress > firstProgress)
+    #expect(machine.pose.progress < firstProgress)
+
+    var defaultMachine = PeelGestureMachine()
+    defaultMachine.begin(corner: .topRight, at: PeelPoint(x: 700, y: 100), timestamp: 0)
+    defaultMachine.update(to: PeelPoint(x: 620, y: 20), timestamp: 0.1)
+    #expect(defaultMachine.pose.progress < 0.1)
+}
+
+@Test("Vertical travel does not change the revealed amount at a fixed horizontal position")
+func verticalTravelDoesNotIncreaseExposure() {
+    var machine = PeelGestureMachine(configuration: .init(maximumDragDistance: 100))
+    machine.begin(corner: .topRight, at: PeelPoint(x: 100, y: 100), timestamp: 0)
+    machine.update(to: PeelPoint(x: 60, y: 90), timestamp: 0.1)
+    let progress = machine.pose.progress
+    machine.update(to: PeelPoint(x: 60, y: 0), timestamp: 0.2)
+    #expect(machine.pose.progress == progress)
+    #expect(machine.pose.progress < 0.4)
 }
 
 @Test("Released peel settles back to the flat state")

@@ -251,9 +251,7 @@ public final class PeelDemoView: NSView {
     }
 
     private func gestureConfiguration() -> PeelGestureConfiguration {
-        var configuration = PeelGestureConfiguration.reboundStrength(strengthSlider.doubleValue)
-        configuration.maximumDragDistance *= reachSlider.doubleValue / 0.82
-        return configuration
+        PeelGestureConfiguration.reboundStrength(strengthSlider.doubleValue)
     }
 
     @objc private func refreshWindows() {
