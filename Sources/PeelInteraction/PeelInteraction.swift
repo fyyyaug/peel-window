@@ -13,7 +13,7 @@ public struct PeelGestureConfiguration: Equatable, Sendable {
     public var damping: Double
 
     public init(
-        maximumDragDistance: Double = 650,
+        maximumDragDistance: Double = 550,
         stiffness: Double = 190,
         damping: Double = 24
     ) {
@@ -78,10 +78,9 @@ public struct PeelGestureMachine: Sendable {
         )
         let maximum = max(configuration.maximumDragDistance, 1)
         let clampedDisplacement = inwardDisplacement.clampedLength(to: maximum)
-        // Page exposure follows horizontal travel, so moving the pointer back
-        // toward its starting edge always closes the curl, even after a diagonal drag.
-        let horizontalProgress = min(abs(inwardDisplacement.x) / maximum, 1)
-        let progress = pow(horizontalProgress, 1.4)
+        // Distance controls exposure; direction controls whether the curled
+        // edge advances mainly from the side or from the top/bottom.
+        let progress = pow(clampedDisplacement.length / maximum, 1.3)
         let easedLift = sin(progress * .pi / 2)
 
         pose = PeelPose(

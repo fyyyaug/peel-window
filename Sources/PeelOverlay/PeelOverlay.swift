@@ -12,7 +12,7 @@ public final class PeelDemoView: NSView {
     private let metalView: MTKView
     private let renderer: PeelMetalRenderer
     private let statusLabel = NSTextField(labelWithString: "")
-    private let hintLabel = NSTextField(labelWithString: "Drag an enabled corner farther to lift more of that edge")
+    private let hintLabel = NSTextField(labelWithString: "Drag an enabled corner inward; direction steers the fold")
     private let topLeftButton = NSButton(checkboxWithTitle: "Top left", target: nil, action: nil)
     private let topRightButton = NSButton(checkboxWithTitle: "Top right", target: nil, action: nil)
     private let bottomLeftButton = NSButton(checkboxWithTitle: "Bottom left", target: nil, action: nil)

@@ -39,9 +39,9 @@ func bottomCornerGestures() {
         machine.begin(corner: corner, at: PeelPoint(x: 100, y: 100), timestamp: 0)
         machine.update(to: PeelPoint(x: targetX, y: 150), timestamp: 0.1)
         #expect(machine.pose.corner == corner)
-        #expect(machine.pose.progress > 0.35)
-        #expect(machine.pose.progress < 0.4)
-        #expect(machine.pose.lift > 0.5)
+        #expect(machine.pose.progress > 0.6)
+        #expect(machine.pose.progress < 0.65)
+        #expect(machine.pose.lift > 0.8)
     }
 }
 
@@ -76,19 +76,19 @@ func horizontalMovementControlsCurl() {
 
     var defaultMachine = PeelGestureMachine()
     defaultMachine.begin(corner: .topRight, at: PeelPoint(x: 700, y: 100), timestamp: 0)
-    defaultMachine.update(to: PeelPoint(x: 620, y: 20), timestamp: 0.1)
+    defaultMachine.update(to: PeelPoint(x: 620, y: 100), timestamp: 0.1)
     #expect(defaultMachine.pose.progress < 0.1)
 }
 
-@Test("Vertical travel does not change the revealed amount at a fixed horizontal position")
-func verticalTravelDoesNotIncreaseExposure() {
+@Test("Vertical travel opens more of the top edge at a fixed horizontal position")
+func verticalTravelChangesExposure() {
     var machine = PeelGestureMachine(configuration: .init(maximumDragDistance: 100))
     machine.begin(corner: .topRight, at: PeelPoint(x: 100, y: 100), timestamp: 0)
     machine.update(to: PeelPoint(x: 60, y: 90), timestamp: 0.1)
-    let progress = machine.pose.progress
+    let shallowProgress = machine.pose.progress
     machine.update(to: PeelPoint(x: 60, y: 0), timestamp: 0.2)
-    #expect(machine.pose.progress == progress)
-    #expect(machine.pose.progress < 0.4)
+    #expect(machine.pose.progress > shallowProgress)
+    #expect(machine.pose.pull.y < 0)
 }
 
 @Test("Released peel settles back to the flat state")

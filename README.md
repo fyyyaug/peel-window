@@ -42,9 +42,9 @@ permissions, and lifecycle.
   toward the other corner on the same side
 - Four independently enabled corners and spring return are implemented in the
   preview; the switches choose where a drag can start, not where the fold ends
-- Horizontal pointer travel controls how much page is revealed, including
-  closing it again during the same drag; the first part of a drag is gentler
-- Twenty-three package tests cover geometry, interaction, page-curl orientation,
+- Pointer distance controls how much page is revealed, while its direction
+  steers the fold between a side peel and a top or bottom peel
+- Twenty-four package tests cover geometry, interaction, page-curl orientation,
   aspect-preserving preview layout, and per-corner lower-window selection
 - Maximum peel size (10–100% reach along the preview edges) and return
   strength (0.25–2×) can be adjusted and persist across launches; peel size

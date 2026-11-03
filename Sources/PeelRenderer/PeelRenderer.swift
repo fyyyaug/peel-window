@@ -254,6 +254,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
                 front: frontCIImage,
                 underneath: underlayCIImage,
                 corner: pose.corner,
+                pull: pose.pull,
                 progress: pose.progress,
                 maximumSize: maximumReach
            ) {

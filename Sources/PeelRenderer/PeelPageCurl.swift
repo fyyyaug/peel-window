@@ -10,6 +10,7 @@ public enum PeelPageCurl {
         front: CIImage,
         underneath: CIImage?,
         corner: PeelCorner,
+        pull: PeelPoint,
         progress: Double,
         maximumSize: Double
     ) -> CIImage? {
@@ -29,7 +30,7 @@ public enum PeelPageCurl {
         filter.backsideImage = backside
         filter.extent = extent
         filter.shadowExtent = extent
-        filter.angle = 4
+        filter.angle = angle(for: corner, pull: pull)
         filter.radius = Float(min(extent.width, extent.height) * 0.20)
         filter.shadowAmount = 0.8
         filter.shadowSize = Float(min(extent.width, extent.height) * 0.025)
@@ -51,6 +52,14 @@ public enum PeelPageCurl {
             tx: horizontalFlip ? extent.width : 0,
             ty: verticalFlip ? extent.height : 0
         )
+    }
+
+    public static func angle(for corner: PeelCorner, pull: PeelPoint) -> Float {
+        let horizontal = corner.unitPoint.x == 0 ? max(pull.x, 0) : max(-pull.x, 0)
+        let vertical = corner.unitPoint.y == 0 ? max(pull.y, 0) : max(-pull.y, 0)
+        let direction = horizontal + vertical > 0.000_001
+            ? atan2(vertical, horizontal) : .pi / 4
+        return Float(Double.pi + direction)
     }
 
     private static func aspectFill(_ image: CIImage, in extent: CGRect) -> CIImage {

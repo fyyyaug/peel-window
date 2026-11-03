@@ -17,6 +17,8 @@ the package test targets run with the full Xcode testing runtime.
 - [x] Use a page curl with a visible backside and shadow, starting at a
       selected corner and carrying the fold toward the other corner as the
       drag deepens.
+- [x] Steer the fold continuously with both drag axes: horizontal travel
+      reveals more of the side and vertical travel reveals more of the top or bottom.
 - [x] Add a 50% still preview to inspect the curl without dragging.
 - [x] Settle back with a tunable spring animation.
 - [x] Display phase, peel progress, and frame time.

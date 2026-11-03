@@ -145,6 +145,10 @@ func nativePageCurlRenders() {
             front: front,
             underneath: lower,
             corner: corner,
+            pull: PeelPoint(
+                x: corner.unitPoint.x == 0 ? 0.5 : -0.5,
+                y: corner.unitPoint.y == 0 ? 0.5 : -0.5
+            ),
             progress: 0.5,
             maximumSize: 1
         )
@@ -152,6 +156,21 @@ func nativePageCurlRenders() {
         if let output {
             #expect(context.createCGImage(output, from: extent) != nil)
         }
+    }
+}
+
+@Test("Page curl direction follows horizontal and vertical pointer travel")
+func pageCurlAngleFollowsPull() {
+    for corner in PeelCorner.allCases {
+        let x = corner.unitPoint.x == 0 ? 1.0 : -1.0
+        let y = corner.unitPoint.y == 0 ? 1.0 : -1.0
+        let sideAngle = PeelPageCurl.angle(for: corner, pull: PeelPoint(x: x, y: 0))
+        let diagonalAngle = PeelPageCurl.angle(for: corner, pull: PeelPoint(x: x, y: y))
+        let topAngle = PeelPageCurl.angle(for: corner, pull: PeelPoint(x: 0, y: y))
+        #expect(abs(sideAngle - Float.pi) < 0.000_001)
+        #expect(sideAngle < diagonalAngle)
+        #expect(diagonalAngle < topAngle)
+        #expect(abs(topAngle - Float.pi * 1.5) < 0.000_001)
     }
 }
 
