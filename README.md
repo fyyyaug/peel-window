@@ -1,16 +1,18 @@
 # Peel Window
 
-**使用说明 / User guides:** [中文](Docs/USER_GUIDE_ZH.md) · [English](Docs/USER_GUIDE_EN.md)
+**User guides:** [English](Docs/USER_GUIDE_EN.md) · [中文](Docs/USER_GUIDE_ZH.md)
 
-[**下载 Peel Window 安装包（Apple 芯片 Mac）**](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.1/PeelWindow-0.1.0-macos-arm64.dmg)
+[**Download Peel Window for Apple silicon Mac**](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.1/PeelWindow-0.1.0-macos-arm64.dmg)
 
-只需下载这一个 DMG：打开后将 `PeelWindow.app` 拖入 Applications，再启动应用。
-无需下载源码、Xcode 或其他依赖。支持 Apple 芯片 Mac（M 系列）、macOS 14 及以上。
+Download this single DMG, open it, and drag `PeelWindow.app` into Applications.
+No source code, Xcode, or additional dependencies are required. Supports Apple
+silicon Macs (M series) running macOS 14 or later.
 
-本测试版尚未通过 Apple 公证；首次打开若被 macOS 阻止，请在“系统设置 → 隐私与安全性”中选择针对 PeelWindow 的“仍要打开”。首次翻页需允许屏幕录制权限，并按系统提示重新启动。
+This beta is not notarized by Apple. If macOS blocks the first launch, open
+**System Settings → Privacy & Security** and select **Open Anyway** for PeelWindow.
+Allow screen recording access on first use and restart the app if macOS asks.
 
-[版本说明与下载页面](https://github.com/fyyyaug/peel-window/releases/tag/v0.1.0-beta.1)
-
+[Release notes and downloads](https://github.com/fyyyaug/peel-window/releases/tag/v0.1.0-beta.1)
 
 Peel Window is a native macOS interaction prototype for temporarily revealing
 an obscured window by lifting a corner of the window above it.
