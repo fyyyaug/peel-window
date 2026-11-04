@@ -233,11 +233,17 @@ public final class PeelDemoView: NSView {
         addGestureRecognizer(pan)
         updatePresentation()
         showDemo()
+        PeelDesktopController.shared.onStatus = { [weak self] status in
+            self?.captureStatusLabel.stringValue = status
+            self?.updateDesktopAvailability()
+        }
+        updateDesktopAvailability()
     }
 
     @objc private func strengthChanged(_ sender: NSSlider) {
         strengthLabel.stringValue = String(format: "Return strength: %.2fx", sender.doubleValue)
         UserDefaults.standard.set(sender.doubleValue, forKey: "PeelReturnStrength")
+        PeelDesktopController.shared.settingsChanged()
         if gestureMachine.phase == .idle {
             gestureMachine = PeelGestureMachine(configuration: gestureConfiguration())
         }
@@ -247,6 +253,7 @@ public final class PeelDemoView: NSView {
         let reach = sender.doubleValue
         reachLabel.stringValue = String(format: "Maximum peel size: %.0f%%", reach * 100)
         UserDefaults.standard.set(reach, forKey: "PeelMaximumReach")
+        PeelDesktopController.shared.settingsChanged()
         renderer.maximumReach = reach
         if gestureMachine.phase == .idle {
             gestureMachine = PeelGestureMachine(configuration: gestureConfiguration())
@@ -261,6 +268,7 @@ public final class PeelDemoView: NSView {
             return
         }
         UserDefaults.standard.set(enabledCorners.map(\.rawValue), forKey: "PeelEnabledCorners")
+        PeelDesktopController.shared.settingsChanged()
         renderer.highlightedCorners = Set(enabledCorners)
         desktopSession?.stop()
         updateDesktopAvailability()
@@ -431,46 +439,15 @@ public final class PeelDemoView: NSView {
     }
 
     @objc private func toggleDesktop() {
-        if let desktopSession {
-            desktopSession.stop()
-            return
-        }
-        guard let front = capturedFrontImage,
-              let sourceWindowID = capturedFrontID else { return }
-        do {
-            let session = try PeelDesktopSession(
-                sourceWindowID: sourceWindowID,
-                front: front,
-                enabledCorners: enabledCorners,
-                maximumReach: reachSlider.doubleValue,
-                returnStrength: strengthSlider.doubleValue
-            )
-            session.onStop = { [weak self] reason in
-                self?.desktopSession = nil
-                self?.desktopButton.title = "Use on Desktop"
-                self?.captureStatusLabel.stringValue = reason
-                self?.updateDesktopAvailability()
-            }
-            session.onReady = { [weak self] in
-                self?.captureStatusLabel.stringValue =
-                    "Desktop background ready. Drag an enabled teal corner marker."
-            }
-            session.onWaitingForWindow = { [weak self] in
-                self?.captureStatusLabel.stringValue =
-                    "Bring the selected window itself forward; waiting for it to appear."
-            }
-            desktopSession = session
-            desktopButton.title = "Stop Desktop"
-            captureStatusLabel.stringValue =
-                "Bring the selected window forward; preparing its actual desktop background."
-            session.start()
-        } catch {
-            captureStatusLabel.stringValue = "Desktop peel unavailable: \(error.localizedDescription)"
-        }
+        let controller = PeelDesktopController.shared
+        controller.setEnabled(!controller.isEnabled)
+        updateDesktopAvailability()
     }
 
     private func updateDesktopAvailability() {
-        desktopButton.isEnabled = desktopSession != nil || capturedFrontImage != nil
+        desktopButton.isEnabled = true
+        desktopButton.title = PeelDesktopController.shared.isEnabled
+            ? "Disable Desktop" : "Enable Desktop"
     }
 
     @objc private func toggleCurlPreview() {

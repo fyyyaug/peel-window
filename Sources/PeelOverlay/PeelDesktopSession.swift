@@ -27,6 +27,8 @@ public final class PeelDesktopSession {
     public var onStop: ((String) -> Void)?
     public var onReady: (() -> Void)?
     public var onWaitingForWindow: (() -> Void)?
+    public var onRest: (() -> Void)?
+    public var isInteracting: Bool { gestureMachine.phase != .idle }
 
     private let sourceWindowID: CGWindowID
     private var trackedSystemFrame: CGRect
@@ -144,8 +146,15 @@ public final class PeelDesktopSession {
         }
     }
 
-    public func start() {
+    public func start(activateSource: Bool = true) {
         guard !isStopped else { return }
+        if !activateSource {
+            sourceWasActive = true
+            prepareBackground()
+            safetyTimer = Timer.scheduledTimer(timeInterval: 0.5, target: self,
+                selector: #selector(checkSourceWindow), userInfo: nil, repeats: true)
+            return
+        }
         activationDeadline = ProcessInfo.processInfo.systemUptime + 300
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
@@ -159,7 +168,8 @@ public final class PeelDesktopSession {
                 if processID == self.sourceProcessID {
                     self.sourceWasActive = true
                     self.prepareBackground()
-                } else if self.sourceWasActive {
+                } else if self.sourceWasActive &&
+                    NSWorkspace.shared.frontmostApplication?.processIdentifier != self.sourceProcessID {
                     self.stop(reason: "Desktop peel stopped because another app became active.")
                 }
             }
@@ -168,7 +178,6 @@ public final class PeelDesktopSession {
             sourceWasActive = true
             prepareBackground()
         }
-        NSApp.activate(ignoringOtherApps: true)
         NSRunningApplication(processIdentifier: sourceProcessID)?
             .activate(options: [.activateAllWindows])
         safetyTimer = Timer.scheduledTimer(
@@ -226,6 +235,7 @@ public final class PeelDesktopSession {
         gestureMachine.end()
         if gestureMachine.phase == .idle {
             overlay.orderOut(nil)
+            onRest?()
             return
         }
         settlementTimer = Timer.scheduledTimer(
@@ -246,6 +256,7 @@ public final class PeelDesktopSession {
             settlementTimer?.invalidate()
             settlementTimer = nil
             overlay.orderOut(nil)
+            onRest?()
         }
     }
 
