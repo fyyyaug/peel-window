@@ -52,9 +52,7 @@ struct MarkerSettingsView: View {
                     Text("不透明度：\(Int((opacity * 100).rounded()))%")
                 }
                 ColorPicker("颜色", selection: markerColor, supportsOpacity: false)
-                Slider(value: $delay, in: 0...10, step: 0.1) {
-                    Text("鼠标悬停生效时间：\(delay, specifier: "%.1f") 秒")
-                }
+                HoverDelayControl(delay: $delay)
                 Slider(value: $duration, in: 0...30, step: 1) {
                     Text(duration == 0 ? "显示时长：停留期间一直显示" : "显示时长：\(Int(duration)) 秒")
                 }
@@ -78,6 +76,32 @@ struct MarkerSettingsView: View {
         .frame(minWidth: 500, idealWidth: 580, minHeight: 560)
         .onChange(of: [size, opacity, delay, duration, red, green, blue]) { _, _ in
             PeelDesktopController.shared.settingsChanged()
+        }
+    }
+}
+
+
+struct HoverDelayControl: View {
+    @Binding var delay: Double
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("鼠标悬停生效时间").font(.subheadline.weight(.medium))
+                Spacer()
+                TextField("秒", value: $delay, format: .number.precision(.fractionLength(3)))
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 90)
+                    .accessibilityLabel("鼠标悬停生效时间，秒")
+                Text("秒").foregroundStyle(.secondary)
+            }
+            Slider(value: $delay, in: 0...10, step: 0.001)
+            Text("可直接输入 0.100、0.010 或 0.001 秒；0 表示立即准备。达到设定时间且画面准备就绪后，标记出现并可拖动。")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .onChange(of: delay) { _, value in
+            let safe = value.isFinite ? min(max(value, 0), 10) : 0
+            if value != safe { delay = safe }
         }
     }
 }

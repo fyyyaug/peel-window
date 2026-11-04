@@ -50,6 +50,8 @@ public final class PeelDesktopSession {
     private var isReady = false
     private var sourceWasActive = false
     private var activationDeadline = 0.0
+    private var hoverStartedAt = 0.0
+    private var activationDelay = 0.0
 
     public init(
         sourceWindowID: CGWindowID,
@@ -148,8 +150,11 @@ public final class PeelDesktopSession {
         }
     }
 
-    public func start(activateSource: Bool = true) {
+    public func start(activateSource: Bool = true, hoverStartedAt: TimeInterval = 0,
+                      activationDelay: TimeInterval = 0) {
         guard !isStopped else { return }
+        self.hoverStartedAt = hoverStartedAt
+        self.activationDelay = activationDelay
         if !activateSource {
             sourceWasActive = true
             prepareBackground()
@@ -318,6 +323,17 @@ public final class PeelDesktopSession {
                     return
                 }
                 try renderer.showSnapshots(front: front, underneath: background)
+                let remaining = PeelHoverTiming.remaining(startedAt: hoverStartedAt,
+                    delay: activationDelay, now: ProcessInfo.processInfo.systemUptime)
+                if remaining > 0 {
+                    try await Task.sleep(for: .seconds(remaining))
+                }
+                guard !isStopped else { return }
+                guard Self.currentWindowInfo(for: sourceWindowID)?.frame == current else {
+                    isPreparingBackground = false
+                    prepareBackground()
+                    return
+                }
                 isReady = true
                 for hotspot in hotspots { hotspot.orderFrontRegardless() }
                 onReady?()

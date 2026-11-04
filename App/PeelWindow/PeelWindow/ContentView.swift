@@ -87,8 +87,7 @@ private struct DesktopPreferencesView: View {
                         .background(.background, in: RoundedRectangle(cornerRadius: 18))
                 }
                 VStack(alignment: .leading, spacing: 12) {
-                    sliderTitle("鼠标悬停生效时间", String(format: "%.1f 秒", delay))
-                    Slider(value: $delay, in: 0...10, step: 0.1)
+                    HoverDelayControl(delay: $delay)
                     Text("在角落停留指定时间后准备提示标记；画面准备完成后，按住标记向内拖动，松手恢复。颜色、大小和显示时长可在“提示标记”中调整。")
                         .font(.callout).foregroundStyle(.secondary)
                 }.padding(20).background(.background, in: RoundedRectangle(cornerRadius: 18))

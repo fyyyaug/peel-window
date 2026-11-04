@@ -19,6 +19,8 @@ public final class PeelDesktopController: ObservableObject {
     private var hoverTarget: PeelDesktopTarget?
     private var hoverSince = 0.0
     private var readySince: TimeInterval?
+    private var cachedWindows: [PeelDesktopTarget] = []
+    private var windowsCheckedAt = -Double.infinity
     private let catalog = PeelWindowCatalog()
     private let snapshotter = PeelWindowSnapshotter()
 
@@ -61,7 +63,7 @@ public final class PeelDesktopController: ObservableObject {
 
     private func startMonitoring() {
         guard timer == nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
         }
         if let timer { RunLoop.main.add(timer, forMode: .common) }
@@ -82,7 +84,10 @@ public final class PeelDesktopController: ObservableObject {
               CGPreflightScreenCaptureAccess(), let screen = NSScreen.screens.first else { return }
         let mouse = NSEvent.mouseLocation
         let pointer = CGPoint(x: mouse.x, y: screen.frame.maxY - mouse.y)
-        let windows = (CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID)
+        let now = ProcessInfo.processInfo.systemUptime
+        if now - windowsCheckedAt >= 0.1 {
+            windowsCheckedAt = now
+            cachedWindows = (CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID)
             as? [[String: Any]] ?? []).compactMap { info -> PeelDesktopTarget? in
             guard (info[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
                   let id = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
@@ -90,12 +95,12 @@ public final class PeelDesktopController: ObservableObject {
                   let bounds = info[kCGWindowBounds as String] as? NSDictionary,
                   let frame = CGRect(dictionaryRepresentation: bounds) else { return nil }
             return PeelDesktopTarget(id: id, frame: frame, processID: pid)
+            }
         }
         let saved = UserDefaults.standard.stringArray(forKey: "PeelEnabledCorners")
             ?? [PeelCorner.topRight.rawValue]
         let appearance = PeelMarkerSettings()
-        let now = ProcessInfo.processInfo.systemUptime
-        let next = PeelDesktopTarget.atCorner(pointer: pointer, frontToBack: windows,
+        let next = PeelDesktopTarget.atCorner(pointer: pointer, frontToBack: cachedWindows,
             enabledCorners: saved.compactMap(PeelCorner.init(rawValue:)),
             displayFrame: CGRect(origin: .zero, size: screen.frame.size),
             ownProcessID: ProcessInfo.processInfo.processIdentifier,
@@ -112,7 +117,7 @@ public final class PeelDesktopController: ObservableObject {
         guard next != target else { return }
         clearSession()
         guard let next, next != completedTarget else { return }
-        guard now - hoverSince >= appearance.delay else { return }
+        let hoverStartedAt = hoverSince
         target = next
         let revision = generation
         Task { @MainActor [weak self] in
@@ -139,7 +144,8 @@ public final class PeelDesktopController: ObservableObject {
                 }
                 newSession.onStop = { [weak self] _ in self?.clearSession() }
                 session = newSession
-                newSession.start(activateSource: false)
+                newSession.start(activateSource: false, hoverStartedAt: hoverStartedAt,
+                                 activationDelay: appearance.delay)
             } catch {
                 guard generation == revision else { return }
                 completedTarget = next

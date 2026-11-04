@@ -49,3 +49,7 @@ saved automatically; the settings window includes a preview and reset button.
 The main window has Desktop, Marker, and Preview tabs. Desktop includes the
 persistent switch, four corner choices, maximum reach, spring strength, and hover
 activation time. The Marker tab includes all appearance and timing preferences.
+
+Hover delay can be typed directly with 0.001-second setting precision. The marker
+becomes interactive once both the configured delay and image preparation finish.
+This is a delay preference, not a guarantee of millisecond screen-capture latency.
