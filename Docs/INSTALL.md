@@ -53,3 +53,9 @@ activation time. The Marker tab includes all appearance and timing preferences.
 Hover delay can be typed directly with 0.001-second setting precision. The marker
 becomes interactive once both the configured delay and image preparation finish.
 This is a delay preference, not a guarantee of millisecond screen-capture latency.
+
+Corner prompts now appear independently of screenshot preparation. Zero hover
+delay shows the prompt on the next mouse check instead of waiting for capture.
+Captures are prepared as the pointer approaches a corner. A press made while
+preparation is still running is retained while held, and replayed with the latest
+pointer position when ready; releasing early cancels it.

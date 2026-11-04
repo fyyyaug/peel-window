@@ -88,7 +88,7 @@ private struct DesktopPreferencesView: View {
                 }
                 VStack(alignment: .leading, spacing: 12) {
                     HoverDelayControl(delay: $delay)
-                    Text("在角落停留指定时间后准备提示标记；画面准备完成后，按住标记向内拖动，松手恢复。颜色、大小和显示时长可在“提示标记”中调整。")
+                    Text("在角落停留指定时间后显示标记；按住标记向内拖动，松手恢复。首次画面若未就绪，按住后会在准备好时接上。颜色、大小和显示时长可在“提示标记”中调整。")
                         .font(.callout).foregroundStyle(.secondary)
                 }.padding(20).background(.background, in: RoundedRectangle(cornerRadius: 18))
                 Label("当前支持主显示器内的普通窗口。翻页中显示静态画面，下一次翻页会重新捕获。",

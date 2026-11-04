@@ -58,7 +58,8 @@ public final class PeelDesktopSession {
         front: CGImage,
         enabledCorners: [PeelCorner],
         maximumReach: Double,
-        returnStrength: Double
+        returnStrength: Double,
+        showsMarkers: Bool = true
     ) throws {
         guard let mainScreen = NSScreen.main else { throw PeelDesktopError.noMainDisplay }
         guard let sourceInfo = Self.currentWindowInfo(for: sourceWindowID) else {
@@ -118,7 +119,7 @@ public final class PeelDesktopSession {
             configuration: .reboundStrength(returnStrength)
         )
 
-        for corner in activeCorners {
+        for corner in showsMarkers ? activeCorners : [] {
             let appearance = PeelMarkerSettings()
             let size = min(appearance.size, appKitFrame.width - 20, appKitFrame.height - 20)
             let inset: CGFloat = 10
@@ -210,7 +211,7 @@ public final class PeelDesktopSession {
         onStop?(reason)
     }
 
-    private func begin(at location: CGPoint, corner: PeelCorner) {
+    func begin(at location: CGPoint, corner: PeelCorner) {
         guard !isStopped, isReady else { return }
         settlementTimer?.invalidate()
         gestureMachine = PeelGestureMachine(configuration: .reboundStrength(
@@ -227,7 +228,7 @@ public final class PeelDesktopSession {
         metalView.draw()
     }
 
-    private func update(to location: CGPoint) {
+    func update(to location: CGPoint) {
         guard !isStopped, gestureMachine.phase == .dragging else { return }
         gestureMachine.update(
             to: PeelPoint(x: location.x, y: location.y),
@@ -237,7 +238,7 @@ public final class PeelDesktopSession {
         metalView.draw()
     }
 
-    private func end() {
+    func end() {
         guard !isStopped, gestureMachine.phase == .dragging else { return }
         gestureMachine.end()
         if gestureMachine.phase == .idle {

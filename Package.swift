@@ -61,6 +61,10 @@ let package = Package(
             dependencies: ["PeelCapture"]
         ),
         .testTarget(
+            name: "PeelOverlayTests",
+            dependencies: ["PeelOverlay", "PeelCore"]
+        ),
+        .testTarget(
             name: "PeelWindowingTests",
             dependencies: ["PeelCore", "PeelWindowing"]
         ),

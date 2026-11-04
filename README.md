@@ -44,7 +44,7 @@ permissions, and lifecycle.
   preview; the switches choose where a drag can start, not where the fold ends
 - Pointer distance controls how much page is revealed, while its direction
   steers the fold between a side peel and a top or bottom peel
-- Thirty-five package tests cover geometry, interaction, page-curl orientation,
+- Thirty-six package tests cover geometry, interaction, page-curl orientation,
   preview and desktop layout, display cropping, and per-corner selection
 - Maximum peel size (10–100% reach along the preview edges) and return
   strength (0.25–2×) can be adjusted and persist across launches; peel size
@@ -77,3 +77,7 @@ changed in PeelWindow Settings, with a live preview and automatic saving.
 Hover activation accepts seconds to three decimal places (for example 0.100,
 0.010 or 0.001). Capture preparation runs concurrently with the hover timer;
 actual activation still depends on system scheduling and capture readiness.
+
+The lightweight corner prompt is independent of screenshot and renderer readiness;
+zero delay no longer waits for capture before displaying the marker. Capture is
+prewarmed near corners, with held pointer input replayed when images are ready.

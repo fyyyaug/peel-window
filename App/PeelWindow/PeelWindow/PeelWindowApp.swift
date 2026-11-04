@@ -56,7 +56,7 @@ struct MarkerSettingsView: View {
                 Slider(value: $duration, in: 0...30, step: 1) {
                     Text(duration == 0 ? "显示时长：停留期间一直显示" : "显示时长：\(Int(duration)) 秒")
                 }
-                Text("鼠标停留在窗口角落后开始准备标记，截图准备可能增加少量等待时间。显示时长设为 0 时持续显示；自动隐藏后，移开鼠标再靠近即可重新显示。拖动期间不会自动隐藏。")
+                Text("鼠标靠近角落时提前准备画面，标记按悬停时间显示。显示时长设为 0 时持续显示；自动隐藏后，移开鼠标再靠近即可重新显示。拖动期间不会自动隐藏。")
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Spacer()
@@ -96,7 +96,7 @@ struct HoverDelayControl: View {
                 Text("秒").foregroundStyle(.secondary)
             }
             Slider(value: $delay, in: 0...10, step: 0.001)
-            Text("可直接输入 0.100、0.010 或 0.001 秒；0 表示立即准备。达到设定时间且画面准备就绪后，标记出现并可拖动。")
+            Text("可直接输入 0.100、0.010 或 0.001 秒；0 表示立即准备。达到设定时间即显示标记；首次画面若未就绪，按住拖动会在准备好后接上。")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .onChange(of: delay) { _, value in

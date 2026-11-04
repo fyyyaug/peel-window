@@ -13,6 +13,7 @@ public final class PeelDesktopController: ObservableObject {
     public var onStatus: ((String) -> Void)?
     private var timer: Timer?
     private var session: PeelDesktopSession?
+    private var prompt: PeelDesktopPrompt?
     private var target: PeelDesktopTarget?
     private var completedTarget: PeelDesktopTarget?
     private var generation = UUID()
@@ -75,12 +76,14 @@ public final class PeelDesktopController: ObservableObject {
         session?.onRest = nil
         session?.stop()
         session = nil
+        prompt?.hide()
+        prompt = nil
         target = nil
         readySince = nil
     }
 
     private func tick() {
-        guard isEnabled, session?.isInteracting != true,
+        guard isEnabled, session?.isInteracting != true, prompt?.isPressed != true,
               CGPreflightScreenCaptureAccess(), let screen = NSScreen.screens.first else { return }
         let mouse = NSEvent.mouseLocation
         let pointer = CGPoint(x: mouse.x, y: screen.frame.maxY - mouse.y)
@@ -104,20 +107,49 @@ public final class PeelDesktopController: ObservableObject {
             enabledCorners: saved.compactMap(PeelCorner.init(rawValue:)),
             displayFrame: CGRect(origin: .zero, size: screen.frame.size),
             ownProcessID: ProcessInfo.processInfo.processIdentifier,
+            cornerReach: appearance.size + 120)
+        let markerTarget = PeelDesktopTarget.atCorner(pointer: pointer, frontToBack: cachedWindows,
+            enabledCorners: saved.compactMap(PeelCorner.init(rawValue:)),
+            displayFrame: CGRect(origin: .zero, size: screen.frame.size),
+            ownProcessID: ProcessInfo.processInfo.processIdentifier,
             cornerReach: appearance.size + 16)
-        if next != hoverTarget {
-            hoverTarget = next
+        if markerTarget != hoverTarget {
+            prompt?.hide()
+            prompt = nil
+            readySince = nil
+            hoverTarget = markerTarget
             hoverSince = now
         }
         if let readySince, appearance.duration > 0, now - readySince >= appearance.duration {
             completedTarget = target
             clearSession()
         }
-        if next != completedTarget { completedTarget = nil }
+        if markerTarget != completedTarget { completedTarget = nil }
+        if let markerTarget, markerTarget != completedTarget, prompt == nil,
+           now - hoverSince >= appearance.delay {
+            let newPrompt = PeelDesktopPrompt(frame: markerTarget.frame,
+                screenHeight: screen.frame.maxY,
+                corners: saved.compactMap(PeelCorner.init(rawValue:)))
+            newPrompt.onDown = { [weak self] point, corner in self?.session?.begin(at: point, corner: corner) }
+            newPrompt.onDrag = { [weak self] point in self?.session?.update(to: point) }
+            newPrompt.onUp = { [weak self] in
+                guard let self else { return }
+                if session?.isInteracting == true { session?.end() }
+                else { completedTarget = markerTarget; clearSession() }
+            }
+            prompt = newPrompt
+            readySince = now
+            newPrompt.show()
+        }
         guard next != target else { return }
+        // Keep a just-created prompt while retiring an earlier window session.
+        let currentPrompt = prompt
+        let shownAt = readySince
+        prompt = nil
         clearSession()
+        prompt = currentPrompt
+        readySince = shownAt
         guard let next, next != completedTarget else { return }
-        let hoverStartedAt = hoverSince
         target = next
         let revision = generation
         Task { @MainActor [weak self] in
@@ -133,9 +165,12 @@ public final class PeelDesktopController: ObservableObject {
                 let strength = defaults.object(forKey: "PeelReturnStrength") as? Double ?? 1
                 let newSession = try PeelDesktopSession(sourceWindowID: next.id, front: front,
                     enabledCorners: saved.compactMap(PeelCorner.init(rawValue:)),
-                    maximumReach: reach, returnStrength: strength)
+                    maximumReach: reach, returnStrength: strength, showsMarkers: false)
                 newSession.onReady = { [weak self] in
-                    self?.readySince = ProcessInfo.processInfo.systemUptime
+                    if let self, let prompt, prompt.isPressed {
+                        session?.begin(at: prompt.downPoint, corner: prompt.pressedCorner)
+                        session?.update(to: prompt.currentPoint)
+                    }
                     self?.onStatus?("Desktop mode on. Drag the corner marker.")
                 }
                 newSession.onRest = { [weak self] in
@@ -144,8 +179,7 @@ public final class PeelDesktopController: ObservableObject {
                 }
                 newSession.onStop = { [weak self] _ in self?.clearSession() }
                 session = newSession
-                newSession.start(activateSource: false, hoverStartedAt: hoverStartedAt,
-                                 activationDelay: appearance.delay)
+                newSession.start(activateSource: false)
             } catch {
                 guard generation == revision else { return }
                 completedTarget = next
