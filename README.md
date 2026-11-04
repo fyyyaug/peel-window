@@ -2,6 +2,9 @@
 
 **User guides:** [English](Docs/USER_GUIDE_EN.md) · [中文](Docs/USER_GUIDE_ZH.md)
 
+The guides cover installation, screen recording permission, desktop peeling,
+and customization of corner markers and hover timing.
+
 [**Download Peel Window for Apple silicon Mac**](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.1/PeelWindow-0.1.0-macos-arm64.dmg)
 
 Download this single DMG, open it, and drag `PeelWindow.app` into Applications.
