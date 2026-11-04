@@ -110,6 +110,9 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         didSet { rebuildVertexBuffer() }
     }
     public var highlightedCorners: Set<PeelCorner> = [.topRight]
+    public var fillsView = false {
+        didSet { updateLayout() }
+    }
 
     public private(set) var lastFrameDuration: TimeInterval = 0
 
@@ -197,7 +200,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     public func corner(_ corner: PeelCorner, in viewSize: CGSize) -> CGPoint {
-        PeelPreviewLayout(viewSize: viewSize, imageSize: imageSize)
+        PeelPreviewLayout(viewSize: viewSize, imageSize: imageSize, fillsView: fillsView)
             .corner(corner, in: viewSize)
     }
 
@@ -352,7 +355,8 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     private func updateLayout() {
-        let layout = PeelPreviewLayout(viewSize: drawableSize, imageSize: imageSize)
+        let layout = PeelPreviewLayout(viewSize: drawableSize, imageSize: imageSize,
+                                       fillsView: fillsView)
         guard previewLayout != layout else { return }
         previewLayout = layout
         let vertices = mesh.vertices.map { vertex in

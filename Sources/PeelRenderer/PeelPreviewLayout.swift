@@ -6,7 +6,12 @@ public struct PeelPreviewLayout: Equatable, Sendable {
     public let halfWidth: Double
     public let halfHeight: Double
 
-    public init(viewSize: CGSize, imageSize: CGSize) {
+    public init(viewSize: CGSize, imageSize: CGSize, fillsView: Bool = false) {
+        if fillsView {
+            halfWidth = 1
+            halfHeight = 1
+            return
+        }
         let viewWidth = max(Double(viewSize.width), 1)
         let viewHeight = max(Double(viewSize.height), 1)
         let imageWidth = max(Double(imageSize.width), 1)

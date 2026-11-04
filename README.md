@@ -44,8 +44,8 @@ permissions, and lifecycle.
   preview; the switches choose where a drag can start, not where the fold ends
 - Pointer distance controls how much page is revealed, while its direction
   steers the fold between a side peel and a top or bottom peel
-- Twenty-four package tests cover geometry, interaction, page-curl orientation,
-  aspect-preserving preview layout, and per-corner lower-window selection
+- Twenty-seven package tests cover geometry, interaction, page-curl orientation,
+  preview and desktop layout, display cropping, and per-corner selection
 - Maximum peel size (10–100% reach along the preview edges) and return
   strength (0.25–2×) can be adjusted and persist across launches; peel size
   does not change drag sensitivity
@@ -53,9 +53,9 @@ permissions, and lifecycle.
   app through an explicit Find Windows action
 - The app opens with a local sample pair and a 50% curl preview, or can display
   selected front/underneath window snapshots without stretching them
-- A desktop beta places a temporary snapshot overlay over a selected window
-  and accepts drags from its enabled corners; it currently supports a window
-  fully on the main display and needs final real-window validation
+- A desktop beta captures the actual desktop behind the selected window when
+  it becomes active, then accepts drags from visible inset corner markers. It
+  currently supports a window fully on the main display and uses still snapshots
 - Real dual-window capture and the peel gesture have been checked on a Mac
 - An opt-in Auto-detect choice probes each corner separately and selects its
   lower snapshot when that corner is dragged; live capture during a peel remains

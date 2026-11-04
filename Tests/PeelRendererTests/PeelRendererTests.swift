@@ -100,6 +100,21 @@ func previewKeepsAspectRatio() {
     }
 }
 
+@Test("Desktop layout covers the source window instead of shrinking it")
+func desktopFillsWindow() {
+    let size = CGSize(width: 1200, height: 800)
+    let layout = PeelPreviewLayout(
+        viewSize: size,
+        imageSize: CGSize(width: 2400, height: 1600),
+        fillsView: true
+    )
+
+    #expect(layout.halfWidth == 1)
+    #expect(layout.halfHeight == 1)
+    #expect(layout.corner(.topLeft, in: size) == CGPoint(x: 0, y: 800))
+    #expect(layout.corner(.topRight, in: size) == CGPoint(x: 1200, y: 800))
+}
+
 @Test("Every corner maps to the corresponding preview corner")
 func previewCorners() {
     let size = CGSize(width: 1000, height: 700)

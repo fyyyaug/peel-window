@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import MetalKit
+import PeelCapture
 import PeelCore
 import PeelInteraction
 import PeelRenderer
@@ -9,14 +10,14 @@ public enum PeelDesktopError: LocalizedError {
     case noMainDisplay
     case unsupportedWindowPosition
     case rendererUnavailable
-    case noLowerWindow
+    case noEnabledCorner
 
     public var errorDescription: String? {
         switch self {
         case .noMainDisplay: "No main display is available."
         case .unsupportedWindowPosition: "Desktop peel currently supports windows fully on the main display."
         case .rendererUnavailable: "The desktop renderer could not start."
-        case .noLowerWindow: "No captured lower window is available at an enabled corner."
+        case .noEnabledCorner: "Enable at least one corner for desktop peeling."
         }
     }
 }
@@ -24,12 +25,16 @@ public enum PeelDesktopError: LocalizedError {
 @MainActor
 public final class PeelDesktopSession {
     public var onStop: ((String) -> Void)?
+    public var onReady: (() -> Void)?
+    public var onWaitingForWindow: (() -> Void)?
 
     private let sourceWindowID: CGWindowID
-    private let initialSystemFrame: CGRect
+    private var trackedSystemFrame: CGRect
     private let sourceProcessID: pid_t
+    private let mainScreenFrame: CGRect
+    private let activeCorners: [PeelCorner]
     private let front: CGImage
-    private let underlays: [PeelCorner: CGImage]
+    private let snapshotter = PeelWindowSnapshotter()
     private let overlay: NSPanel
     private let metalView: MTKView
     private let renderer: PeelMetalRenderer
@@ -39,32 +44,36 @@ public final class PeelDesktopSession {
     private var safetyTimer: Timer?
     private var activationObserver: NSObjectProtocol?
     private var isStopped = false
+    private var isPreparingBackground = false
+    private var isReady = false
     private var sourceWasActive = false
     private var activationDeadline = 0.0
 
     public init(
         sourceWindowID: CGWindowID,
-        sourceFrame: CGRect,
         front: CGImage,
-        underlays: [PeelCorner: CGImage],
         enabledCorners: [PeelCorner],
         maximumReach: Double,
         returnStrength: Double
     ) throws {
-        guard let mainScreen = NSScreen.screens.first else { throw PeelDesktopError.noMainDisplay }
-        let displayFrame = CGRect(origin: .zero, size: mainScreen.frame.size)
-        guard displayFrame.contains(sourceFrame), sourceFrame.width >= 160,
-              sourceFrame.height >= 120 else {
+        guard let mainScreen = NSScreen.main else { throw PeelDesktopError.noMainDisplay }
+        guard let sourceInfo = Self.currentWindowInfo(for: sourceWindowID) else {
             throw PeelDesktopError.unsupportedWindowPosition
         }
-        let activeCorners = enabledCorners.filter { underlays[$0] != nil }
-        guard !activeCorners.isEmpty else { throw PeelDesktopError.noLowerWindow }
+        let actualFrame = sourceInfo.frame
+        let displayFrame = CGRect(origin: .zero, size: mainScreen.frame.size)
+        guard displayFrame.contains(actualFrame), actualFrame.width >= 160,
+              actualFrame.height >= 120 else {
+            throw PeelDesktopError.unsupportedWindowPosition
+        }
+        let activeCorners = enabledCorners
+        guard !activeCorners.isEmpty else { throw PeelDesktopError.noEnabledCorner }
 
         let appKitFrame = CGRect(
-            x: sourceFrame.minX,
-            y: mainScreen.frame.maxY - sourceFrame.maxY,
-            width: sourceFrame.width,
-            height: sourceFrame.height
+            x: actualFrame.minX,
+            y: mainScreen.frame.maxY - actualFrame.maxY,
+            width: actualFrame.width,
+            height: actualFrame.height
         )
         guard let device = MTLCreateSystemDefaultDevice() else {
             throw PeelDesktopError.rendererUnavailable
@@ -73,9 +82,10 @@ public final class PeelDesktopSession {
         guard let renderer = PeelMetalRenderer(view: metalView) else {
             throw PeelDesktopError.rendererUnavailable
         }
+        renderer.fillsView = true
         renderer.maximumReach = maximumReach
         renderer.highlightedCorners = []
-        try renderer.showSnapshots(front: front, underneath: underlays[activeCorners[0]])
+        try renderer.showSnapshots(front: front, underneath: nil)
 
         let overlay = NSPanel(
             contentRect: appKitFrame,
@@ -92,13 +102,11 @@ public final class PeelDesktopSession {
         overlay.contentView = metalView
 
         self.sourceWindowID = sourceWindowID
-        guard let sourceInfo = Self.currentWindowInfo(for: sourceWindowID) else {
-            throw PeelDesktopError.unsupportedWindowPosition
-        }
-        self.initialSystemFrame = sourceInfo.frame
+        self.trackedSystemFrame = actualFrame
         self.sourceProcessID = sourceInfo.processID
+        self.mainScreenFrame = mainScreen.frame
+        self.activeCorners = activeCorners
         self.front = front
-        self.underlays = underlays
         self.overlay = overlay
         self.metalView = metalView
         self.renderer = renderer
@@ -107,11 +115,12 @@ public final class PeelDesktopSession {
         )
 
         for corner in activeCorners {
-            let size: CGFloat = 64
+            let size: CGFloat = 84
+            let inset: CGFloat = 10
             let position = corner.unitPoint
             let hotspotFrame = CGRect(
-                x: position.x == 0 ? appKitFrame.minX : appKitFrame.maxX - size,
-                y: position.y == 0 ? appKitFrame.minY : appKitFrame.maxY - size,
+                x: position.x == 0 ? appKitFrame.minX + inset : appKitFrame.maxX - size - inset,
+                y: position.y == 0 ? appKitFrame.minY + inset : appKitFrame.maxY - size - inset,
                 width: size,
                 height: size
             )
@@ -124,7 +133,7 @@ public final class PeelDesktopSession {
             hotspot.isOpaque = false
             hotspot.backgroundColor = .clear
             hotspot.hasShadow = false
-            hotspot.level = .floating
+            hotspot.level = .screenSaver
             hotspot.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             let view = PeelDesktopHotspotView(frame: CGRect(origin: .zero, size: hotspotFrame.size))
             view.onDown = { [weak self] location in self?.begin(at: location, corner: corner) }
@@ -137,8 +146,7 @@ public final class PeelDesktopSession {
 
     public func start() {
         guard !isStopped else { return }
-        for hotspot in hotspots { hotspot.orderFrontRegardless() }
-        activationDeadline = ProcessInfo.processInfo.systemUptime + 15
+        activationDeadline = ProcessInfo.processInfo.systemUptime + 300
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
@@ -150,6 +158,7 @@ public final class PeelDesktopSession {
             Task { @MainActor in
                 if processID == self.sourceProcessID {
                     self.sourceWasActive = true
+                    self.prepareBackground()
                 } else if self.sourceWasActive {
                     self.stop(reason: "Desktop peel stopped because another app became active.")
                 }
@@ -157,8 +166,11 @@ public final class PeelDesktopSession {
         }
         if NSWorkspace.shared.frontmostApplication?.processIdentifier == sourceProcessID {
             sourceWasActive = true
+            prepareBackground()
         }
-        NSRunningApplication(processIdentifier: sourceProcessID)?.activate()
+        NSApp.activate(ignoringOtherApps: true)
+        NSRunningApplication(processIdentifier: sourceProcessID)?
+            .activate(options: [.activateAllWindows])
         safetyTimer = Timer.scheduledTimer(
             timeInterval: 0.5,
             target: self,
@@ -183,17 +195,11 @@ public final class PeelDesktopSession {
     }
 
     private func begin(at location: CGPoint, corner: PeelCorner) {
-        guard !isStopped, let lower = underlays[corner] else { return }
+        guard !isStopped, isReady else { return }
         settlementTimer?.invalidate()
         gestureMachine = PeelGestureMachine(configuration: .reboundStrength(
             UserDefaults.standard.double(forKey: "PeelReturnStrength")
         ))
-        do {
-            try renderer.showSnapshots(front: front, underneath: lower)
-        } catch {
-            stop(reason: "Desktop peel stopped because the captured image could not load.")
-            return
-        }
         gestureMachine.begin(
             corner: corner,
             at: PeelPoint(x: location.x, y: location.y),
@@ -248,20 +254,88 @@ public final class PeelDesktopSession {
         if !sourceWasActive {
             if NSWorkspace.shared.frontmostApplication?.processIdentifier == sourceProcessID {
                 sourceWasActive = true
+                prepareBackground()
             } else if ProcessInfo.processInfo.systemUptime >= activationDeadline {
                 stop(reason: "Desktop peel timed out. Bring the selected window forward, then try again.")
                 return
             }
         }
+        if sourceWasActive && !isReady && !isPreparingBackground {
+            prepareBackground()
+        }
         guard let current = Self.currentWindowInfo(for: sourceWindowID)?.frame else {
             stop(reason: "Desktop peel stopped because the selected window is unavailable.")
             return
         }
-        if abs(current.minX - initialSystemFrame.minX) > 2 ||
-            abs(current.minY - initialSystemFrame.minY) > 2 ||
-            abs(current.width - initialSystemFrame.width) > 2 ||
-            abs(current.height - initialSystemFrame.height) > 2 {
+        if isReady && (abs(current.minX - trackedSystemFrame.minX) > 2 ||
+            abs(current.minY - trackedSystemFrame.minY) > 2 ||
+            abs(current.width - trackedSystemFrame.width) > 2 ||
+            abs(current.height - trackedSystemFrame.height) > 2) {
             stop(reason: "Desktop peel stopped because the selected window moved or resized.")
+        } else if !isReady && !isPreparingBackground {
+            alignPanels(to: current)
+        }
+    }
+
+    private func prepareBackground() {
+        guard sourceWasActive, !isPreparingBackground, !isReady, !isStopped else { return }
+        guard let current = Self.currentWindowInfo(for: sourceWindowID)?.frame else {
+            stop(reason: "Desktop peel stopped because the selected window is unavailable.")
+            return
+        }
+        alignPanels(to: current)
+        isPreparingBackground = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let background = try await snapshotter.captureDesktopBehind(
+                    windowID: sourceWindowID,
+                    windowFrame: current,
+                    outputSize: CGSize(width: front.width, height: front.height)
+                )
+                guard !isStopped else { return }
+                guard let latest = Self.currentWindowInfo(for: sourceWindowID)?.frame else {
+                    stop(reason: "Desktop peel stopped because the selected window is unavailable.")
+                    return
+                }
+                if latest != current {
+                    isPreparingBackground = false
+                    alignPanels(to: latest)
+                    prepareBackground()
+                    return
+                }
+                try renderer.showSnapshots(front: front, underneath: background)
+                isReady = true
+                for hotspot in hotspots { hotspot.orderFrontRegardless() }
+                onReady?()
+            } catch PeelCaptureError.sourceNotOnScreen {
+                isPreparingBackground = false
+                onWaitingForWindow?()
+            } catch {
+                stop(reason: "Desktop peel stopped because the background capture failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func alignPanels(to frame: CGRect) {
+        trackedSystemFrame = frame
+        let appKitFrame = CGRect(
+            x: frame.minX,
+            y: mainScreenFrame.maxY - frame.maxY,
+            width: frame.width,
+            height: frame.height
+        )
+        overlay.setFrame(appKitFrame, display: false)
+        for (corner, hotspot) in zip(activeCorners, hotspots) {
+            let size: CGFloat = 84
+            let inset: CGFloat = 10
+            let point = corner.unitPoint
+            hotspot.setFrame(CGRect(
+                x: point.x == 0 ? appKitFrame.minX + inset : appKitFrame.maxX - size - inset,
+                y: point.y == 0 ? appKitFrame.minY + inset : appKitFrame.maxY - size - inset,
+                width: size,
+                height: size
+            ), display: false)
         }
     }
 
@@ -287,6 +361,16 @@ private final class PeelDesktopHotspotView: NSView {
     var onDown: ((CGPoint) -> Void)?
     var onDrag: ((CGPoint) -> Void)?
     var onUp: (() -> Void)?
+
+    override func draw(_ dirtyRect: NSRect) {
+        let marker = bounds.insetBy(dx: 3, dy: 3)
+        let path = NSBezierPath(roundedRect: marker, xRadius: 14, yRadius: 14)
+        NSColor.systemTeal.withAlphaComponent(0.42).setFill()
+        path.fill()
+        NSColor.white.withAlphaComponent(0.9).setStroke()
+        path.lineWidth = 2
+        path.stroke()
+    }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override func mouseDown(with event: NSEvent) { onDown?(NSEvent.mouseLocation) }

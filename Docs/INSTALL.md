@@ -13,10 +13,12 @@ snapshots while a page is curled, so changing content requires a new Capture.
    for PeelWindow. Do not disable Gatekeeper globally.
 3. In PeelWindow, click **Find Windows**. macOS will ask for **Screen & System
    Audio Recording** access. Allow PeelWindow and restart it if prompted.
-4. Select the front window, leave **Auto-detect actual window below** selected
-   or choose a lower window manually, then click **Capture**.
+4. Select the front window and click **Capture**. The lower-window menu affects
+   the in-app preview only; desktop mode captures the actual background behind
+   the selected window when that window becomes active.
 5. Click **Use on Desktop**, bring the selected window to the front if needed,
-   and drag an enabled corner of that window.
+   wait for the teal corner markers, and drag a marker inward.
+   The selected window must be brought forward within five minutes.
    The overlay stops if the source app changes or the window moves or closes.
 
 If macOS keeps an older PeelWindow permission entry after an update, remove
