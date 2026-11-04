@@ -9,6 +9,7 @@ import PeelCapture
 public final class PeelDesktopController: ObservableObject {
     public static let shared = PeelDesktopController()
     @Published public private(set) var isEnabled: Bool
+    @Published public private(set) var hasScreenAccess = CGPreflightScreenCaptureAccess()
     public var onStatus: ((String) -> Void)?
     private var timer: Timer?
     private var session: PeelDesktopSession?
@@ -44,6 +45,18 @@ public final class PeelDesktopController: ObservableObject {
         completedTarget = nil
         hoverTarget = nil
         clearSession()
+    }
+
+    public func checkScreenAccess(request: Bool = false) {
+        hasScreenAccess = CGPreflightScreenCaptureAccess()
+        if request && !hasScreenAccess {
+            _ = CGRequestScreenCaptureAccess()
+            hasScreenAccess = CGPreflightScreenCaptureAccess()
+            if !hasScreenAccess,
+               let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                NSWorkspace.shared.open(url)
+            }
+        }
     }
 
     private func startMonitoring() {

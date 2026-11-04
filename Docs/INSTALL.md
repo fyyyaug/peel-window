@@ -40,8 +40,12 @@ does not create an Apple Developer ID signature.
 ## Corner marker preferences
 
 Open **PeelWindow → Settings…** (Command-comma) to adjust marker size (24–140
-points), opacity (10–100%), color, appearance delay (0–3 seconds), and visible
+points), opacity (10–100%), color, hover activation delay (0–10 seconds), and visible
 duration (0–30 seconds). Zero duration keeps the marker visible while hovering.
 After a timed marker hides, leave and approach the corner to show it again.
 Dragging is never interrupted by the visible-duration setting. Preferences are
 saved automatically; the settings window includes a preview and reset button.
+
+The main window has Desktop, Marker, and Preview tabs. Desktop includes the
+persistent switch, four corner choices, maximum reach, spring strength, and hover
+activation time. The Marker tab includes all appearance and timing preferences.

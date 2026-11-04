@@ -13,7 +13,7 @@ struct PeelMarkerSettings {
             return saved.isFinite ? min(max(saved, range.lowerBound), range.upperBound) : fallback
         }
         size = value("PeelMarkerSize", 84, 24...140)
-        delay = value("PeelMarkerDelay", 0, 0...3)
+        delay = value("PeelMarkerDelay", 0, 0...10)
         duration = value("PeelMarkerDuration", 0, 0...30)
         opacity = value("PeelMarkerOpacity", 0.42, 0.1...1)
         color = NSColor(srgbRed: value("PeelMarkerRed", 0, 0...1),

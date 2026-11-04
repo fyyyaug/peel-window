@@ -24,7 +24,7 @@ struct PeelWindowApp: App {
     }
 }
 
-private struct MarkerSettingsView: View {
+struct MarkerSettingsView: View {
     @AppStorage("PeelMarkerSize") private var size = 84.0
     @AppStorage("PeelMarkerDelay") private var delay = 0.0
     @AppStorage("PeelMarkerDuration") private var duration = 0.0
@@ -52,8 +52,8 @@ private struct MarkerSettingsView: View {
                     Text("不透明度：\(Int((opacity * 100).rounded()))%")
                 }
                 ColorPicker("颜色", selection: markerColor, supportsOpacity: false)
-                Slider(value: $delay, in: 0...3, step: 0.1) {
-                    Text("出现延迟：\(delay, specifier: "%.1f") 秒")
+                Slider(value: $delay, in: 0...10, step: 0.1) {
+                    Text("鼠标悬停生效时间：\(delay, specifier: "%.1f") 秒")
                 }
                 Slider(value: $duration, in: 0...30, step: 1) {
                     Text(duration == 0 ? "显示时长：停留期间一直显示" : "显示时长：\(Int(duration)) 秒")
@@ -75,7 +75,7 @@ private struct MarkerSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 500)
+        .frame(minWidth: 500, idealWidth: 580, minHeight: 560)
         .onChange(of: [size, opacity, delay, duration, red, green, blue]) { _, _ in
             PeelDesktopController.shared.settingsChanged()
         }
