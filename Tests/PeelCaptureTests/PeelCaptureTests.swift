@@ -3,6 +3,28 @@ import CoreImage
 import Testing
 @testable import PeelCapture
 
+@Test("Switching between two windows excludes the correct upper stack")
+func switchingSourceWindows() {
+    let stack: [CGWindowID] = [90, 11, 22, 33]
+    #expect(PeelDesktopStack.excludedWindowIDs(sourceID: 11, frontToBack: stack) == [90, 11])
+    #expect(PeelDesktopStack.excludedWindowIDs(sourceID: 22, frontToBack: stack) == [90, 11, 22])
+    #expect(!PeelDesktopStack.excludedWindowIDs(sourceID: 22, frontToBack: stack).contains(33))
+    let reordered: [CGWindowID] = [90, 22, 11, 33]
+    #expect(PeelDesktopStack.excludedWindowIDs(sourceID: 22, frontToBack: reordered) == [90, 22])
+}
+
+@Test("Each source window uses its own position and dimensions for cropping")
+func switchingSourceCrop() {
+    let display = CGRect(x: 0, y: 0, width: 1000, height: 800)
+    let pixels = CGSize(width: 2000, height: 1600)
+    let first = PeelDesktopCrop(displayFrame: display,
+        sourceFrame: CGRect(x: 100, y: 200, width: 300, height: 100), displayPixels: pixels)
+    let second = PeelDesktopCrop(displayFrame: display,
+        sourceFrame: CGRect(x: 500, y: 50, width: 400, height: 600), displayPixels: pixels)
+    #expect(first.pixelRect == CGRect(x: 200, y: 1000, width: 600, height: 200))
+    #expect(second.pixelRect == CGRect(x: 1000, y: 300, width: 800, height: 1200))
+}
+
 @Test("Desktop crop maps a top-left screen window into display pixels")
 func desktopCropCoordinates() {
     let crop = PeelDesktopCrop(

@@ -39,6 +39,7 @@ public final class PeelDemoView: NSView {
     private var lastDragPeakProgress = 0.0
     private var previewingCurl = false
     private var capturedFrontImage: CGImage?
+    private var captureRevision = UUID()
     private var capturedFrontID: CGWindowID?
     private var capturedUnderlayImage: CGImage?
     private var automaticUnderlays: [PeelCorner: CGImage] = [:]
@@ -147,6 +148,10 @@ public final class PeelDemoView: NSView {
         underneathPopup.addItem(withTitle: "Window underneath (optional)")
         addSubview(frontPopup)
         addSubview(underneathPopup)
+        frontPopup.target = self
+        frontPopup.action = #selector(windowSelectionChanged)
+        underneathPopup.target = self
+        underneathPopup.action = #selector(windowSelectionChanged)
 
         for button in [refreshButton, captureButton, demoButton, previewButton, desktopButton] {
             button.translatesAutoresizingMaskIntoConstraints = false
@@ -267,6 +272,7 @@ public final class PeelDemoView: NSView {
     }
 
     @objc private func refreshWindows() {
+        invalidateCapture()
         if !CGPreflightScreenCaptureAccess() && !CGRequestScreenCaptureAccess() {
             captureStatusLabel.stringValue = "Allow PeelWindow in Screen & System Audio Recording, then restart the app."
             return
@@ -305,7 +311,8 @@ public final class PeelDemoView: NSView {
     }
 
     @objc private func captureSelectedWindows() {
-        desktopSession?.stop()
+        invalidateCapture()
+        let revision = captureRevision
         stopCurlPreview()
         guard let frontID = (frontPopup.selectedItem?.representedObject as? NSNumber)?.uint32Value else {
             captureStatusLabel.stringValue = "Select a front window first."
@@ -321,7 +328,9 @@ public final class PeelDemoView: NSView {
         captureButton.isEnabled = false
         captureStatusLabel.stringValue = "Capturing selected window snapshots…"
         Task { @MainActor in
-            defer { captureButton.isEnabled = true }
+            defer {
+                if captureRevision == revision { captureButton.isEnabled = true }
+            }
             do {
                 _ = try await windowCatalog.refresh()
                 guard let frontWindow = windowCatalog.window(withID: frontID) else {
@@ -359,6 +368,7 @@ public final class PeelDemoView: NSView {
                         throw PeelCaptureError.windowUnavailable
                     }
                 }
+                guard captureRevision == revision else { return }
                 try renderer.showSnapshots(front: frontImage, underneath: underneathImage)
                 capturedFrontImage = frontImage
                 capturedFrontID = frontID
@@ -375,12 +385,31 @@ public final class PeelDemoView: NSView {
                         ? "Two snapshots ready. Use on Desktop or drag a corner in the preview."
                         : "Front captured. Desktop mode can capture the actual background."
             } catch {
+                guard captureRevision == revision else { return }
                 captureStatusLabel.stringValue = "Capture failed: \(error.localizedDescription)"
             }
         }
     }
 
+    private func invalidateCapture() {
+        captureRevision = UUID()
+        desktopSession?.stop()
+        capturedFrontImage = nil
+        capturedFrontID = nil
+        capturedUnderlayImage = nil
+        automaticUnderlays = [:]
+        usingAutomaticUnderlay = false
+        captureButton.isEnabled = true
+        updateDesktopAvailability()
+    }
+
+    @objc private func windowSelectionChanged() {
+        invalidateCapture()
+        captureStatusLabel.stringValue = "Window selection changed. Capture this selection before using desktop mode."
+    }
+
     @objc private func showDemo() {
+        invalidateCapture()
         do {
             desktopSession?.stop()
             stopCurlPreview()

@@ -51,7 +51,7 @@ public final class PeelWindowSnapshotter {
         )
         guard let display = content.displays.first(where: { $0.displayID == CGMainDisplayID() })
         else { throw PeelCaptureError.desktopUnavailable("main display missing") }
-        guard let source = content.windows.first(where: { $0.windowID == windowID })
+        guard content.windows.contains(where: { $0.windowID == windowID })
         else { throw PeelCaptureError.desktopUnavailable("source window missing") }
         let visibleWindowIDs = (CGWindowListCopyWindowInfo(
             .optionOnScreenOnly,
@@ -62,9 +62,13 @@ public final class PeelWindowSnapshotter {
         guard visibleWindowIDs.contains(windowID) else {
             throw PeelCaptureError.sourceNotOnScreen
         }
+        let excludedIDs = PeelDesktopStack.excludedWindowIDs(
+            sourceID: windowID,
+            frontToBack: visibleWindowIDs
+        )
         let ownBundleID = Bundle.main.bundleIdentifier
         let excluded = content.windows.filter { window in
-            window.windowID == source.windowID ||
+            excludedIDs.contains(window.windowID) ||
                 (ownBundleID != nil && window.owningApplication?.bundleIdentifier == ownBundleID)
         }
         let filter = SCContentFilter(display: display, excludingWindows: excluded)
@@ -88,6 +92,18 @@ public final class PeelWindowSnapshotter {
             )
         }
         return cropped
+    }
+}
+
+/// A display screenshot must omit everything above the source as well as the
+/// source itself, even when several windows belong to the same application.
+public enum PeelDesktopStack {
+    public static func excludedWindowIDs(
+        sourceID: CGWindowID,
+        frontToBack: [CGWindowID]
+    ) -> Set<CGWindowID> {
+        guard let index = frontToBack.firstIndex(of: sourceID) else { return [sourceID] }
+        return Set(frontToBack[...index])
     }
 }
 
