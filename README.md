@@ -1,5 +1,7 @@
 # Peel Window
 
+**使用说明 / User guides:** [中文](Docs/USER_GUIDE_ZH.md) · [English](Docs/USER_GUIDE_EN.md)
+
 [**下载 Peel Window 安装包（Apple 芯片 Mac）**](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.1/PeelWindow-0.1.0-macos-arm64.dmg)
 
 只需下载这一个 DMG：打开后将 `PeelWindow.app` 拖入 Applications，再启动应用。
