@@ -51,13 +51,17 @@ permissions, and lifecycle.
   does not change drag sensitivity
 - ScreenCaptureKit window discovery and still-image capture are wired into the
   app through an explicit Find Windows action
-- The app opens with a local sample pair and a 50% curl preview, or can display selected front/underneath window
-  snapshots without stretching them; the true desktop overlay is a later
-  milestone
+- The app opens with a local sample pair and a 50% curl preview, or can display
+  selected front/underneath window snapshots without stretching them
+- A desktop beta places a temporary snapshot overlay over a selected window
+  and accepts drags from its enabled corners; it currently supports a window
+  fully on the main display and needs final real-window validation
 - Real dual-window capture and the peel gesture have been checked on a Mac
 - An opt-in Auto-detect choice probes each corner separately and selects its
-  lower snapshot when that corner is dragged; the desktop overlay and live
-  reveal remain future work
+  lower snapshot when that corner is dragged; live capture during a peel remains
+  future work
+
+See [Docs/INSTALL.md](Docs/INSTALL.md) for the locally signed beta install steps.
 
 See [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md) and
 [Docs/ROADMAP.md](Docs/ROADMAP.md) for the working plan.

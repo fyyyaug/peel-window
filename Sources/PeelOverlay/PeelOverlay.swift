@@ -27,6 +27,7 @@ public final class PeelDemoView: NSView {
     private let captureButton = NSButton(title: "Capture", target: nil, action: nil)
     private let demoButton = NSButton(title: "Sample Pair", target: nil, action: nil)
     private let previewButton = NSButton(title: "Preview 50%", target: nil, action: nil)
+    private let desktopButton = NSButton(title: "Use on Desktop", target: nil, action: nil)
     private let captureStatusLabel = NSTextField(labelWithString: "Choose Find Windows to load a real window snapshot")
     private let windowCatalog = PeelWindowCatalog()
     private let windowStackResolver = PeelWindowStackResolver()
@@ -38,8 +39,12 @@ public final class PeelDemoView: NSView {
     private var lastDragPeakProgress = 0.0
     private var previewingCurl = false
     private var capturedFrontImage: CGImage?
+    private var capturedFrontID: CGWindowID?
+    private var capturedFrontFrame: CGRect?
+    private var capturedUnderlayImage: CGImage?
     private var automaticUnderlays: [PeelCorner: CGImage] = [:]
     private var usingAutomaticUnderlay = false
+    private var desktopSession: PeelDesktopSession?
 
     private var cornerButtons: [(PeelCorner, NSButton)] {
         [(.topLeft, topLeftButton), (.topRight, topRightButton),
@@ -144,7 +149,7 @@ public final class PeelDemoView: NSView {
         addSubview(frontPopup)
         addSubview(underneathPopup)
 
-        for button in [refreshButton, captureButton, demoButton, previewButton] {
+        for button in [refreshButton, captureButton, demoButton, previewButton, desktopButton] {
             button.translatesAutoresizingMaskIntoConstraints = false
             button.bezelStyle = .rounded
             button.appearance = NSAppearance(named: .darkAqua)
@@ -159,6 +164,9 @@ public final class PeelDemoView: NSView {
         demoButton.action = #selector(showDemo)
         previewButton.target = self
         previewButton.action = #selector(toggleCurlPreview)
+        desktopButton.target = self
+        desktopButton.action = #selector(toggleDesktop)
+        desktopButton.isEnabled = false
 
         captureStatusLabel.translatesAutoresizingMaskIntoConstraints = false
         captureStatusLabel.font = .systemFont(ofSize: 12)
@@ -210,6 +218,9 @@ public final class PeelDemoView: NSView {
             previewButton.trailingAnchor.constraint(equalTo: strengthLabel.trailingAnchor),
             previewButton.topAnchor.constraint(equalTo: reachSlider.bottomAnchor, constant: 10),
             previewButton.widthAnchor.constraint(equalToConstant: 120),
+            desktopButton.trailingAnchor.constraint(equalTo: previewButton.leadingAnchor, constant: -10),
+            desktopButton.centerYAnchor.constraint(equalTo: previewButton.centerYAnchor),
+            desktopButton.widthAnchor.constraint(equalToConstant: 140),
             captureStatusLabel.leadingAnchor.constraint(equalTo: frontPopup.leadingAnchor),
             captureStatusLabel.bottomAnchor.constraint(equalTo: frontPopup.topAnchor, constant: -7),
         ])
@@ -247,6 +258,8 @@ public final class PeelDemoView: NSView {
         }
         UserDefaults.standard.set(enabledCorners.map(\.rawValue), forKey: "PeelEnabledCorners")
         renderer.highlightedCorners = Set(enabledCorners)
+        desktopSession?.stop()
+        updateDesktopAvailability()
         metalView.draw()
     }
 
@@ -255,11 +268,10 @@ public final class PeelDemoView: NSView {
     }
 
     @objc private func refreshWindows() {
-        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else {
-            captureStatusLabel.stringValue = "Allow Screen Recording in System Settings, then restart PeelWindow."
+        if !CGPreflightScreenCaptureAccess() && !CGRequestScreenCaptureAccess() {
+            captureStatusLabel.stringValue = "Allow PeelWindow in Screen & System Audio Recording, then restart the app."
             return
         }
-
         refreshButton.isEnabled = false
         captureStatusLabel.stringValue = "Finding available windows…"
         Task { @MainActor in
@@ -272,7 +284,7 @@ public final class PeelDemoView: NSView {
                     ? "No supported windows are available."
                     : "Select a front window and optionally a window underneath."
             } catch {
-                captureStatusLabel.stringValue = "Window discovery failed: \(error.localizedDescription)"
+                captureStatusLabel.stringValue = "Window discovery failed. Check Screen Recording permission, then restart PeelWindow: \(error.localizedDescription)"
             }
         }
     }
@@ -290,10 +302,11 @@ public final class PeelDemoView: NSView {
             underneathPopup.lastItem?.representedObject = NSNumber(value: choice.id)
         }
         frontPopup.selectItem(at: 0)
-        underneathPopup.selectItem(at: 0)
+        underneathPopup.selectItem(at: 1)
     }
 
     @objc private func captureSelectedWindows() {
+        desktopSession?.stop()
         stopCurlPreview()
         guard let frontID = (frontPopup.selectedItem?.representedObject as? NSNumber)?.uint32Value else {
             captureStatusLabel.stringValue = "Select a front window first."
@@ -349,14 +362,20 @@ public final class PeelDemoView: NSView {
                 }
                 try renderer.showSnapshots(front: frontImage, underneath: underneathImage)
                 capturedFrontImage = frontImage
+                capturedFrontID = frontID
+                capturedFrontFrame = frontWindow.frame
+                capturedUnderlayImage = underneathImage
                 automaticUnderlays = newAutomaticUnderlays
                 usingAutomaticUnderlay = autoDetectUnderneath
+                updateDesktopAvailability()
                 metalView.draw()
                 captureStatusLabel.stringValue = autoDetectUnderneath
-                    ? "Front captured. Drag an enabled corner to reveal its lower window."
+                    ? newAutomaticUnderlays.isEmpty
+                        ? "No lower window found. Choose one manually, then capture again."
+                        : "Front captured. Use on Desktop or drag a corner in the preview."
                     : underneathImage != nil
-                        ? "Two snapshots ready. Drag an enabled corner to reveal the lower one."
-                        : "Front snapshot ready. Drag an enabled corner."
+                        ? "Two snapshots ready. Use on Desktop or drag a corner in the preview."
+                        : "Front captured. Choose a lower window to enable desktop peel."
             } catch {
                 captureStatusLabel.stringValue = "Capture failed: \(error.localizedDescription)"
             }
@@ -365,10 +384,15 @@ public final class PeelDemoView: NSView {
 
     @objc private func showDemo() {
         do {
+            desktopSession?.stop()
             stopCurlPreview()
             capturedFrontImage = nil
+            capturedFrontID = nil
+            capturedFrontFrame = nil
+            capturedUnderlayImage = nil
             automaticUnderlays = [:]
             usingAutomaticUnderlay = false
+            updateDesktopAvailability()
             try renderer.showSnapshots(
                 front: makeSampleImage(underneath: false),
                 underneath: makeSampleImage(underneath: true)
@@ -378,6 +402,58 @@ public final class PeelDemoView: NSView {
         } catch {
             captureStatusLabel.stringValue = "Unable to restore demo: \(error.localizedDescription)"
         }
+    }
+
+    @objc private func toggleDesktop() {
+        if let desktopSession {
+            desktopSession.stop()
+            return
+        }
+        guard let front = capturedFrontImage,
+              let sourceWindowID = capturedFrontID,
+              let sourceFrame = capturedFrontFrame else { return }
+        let underlays: [PeelCorner: CGImage]
+        if usingAutomaticUnderlay {
+            underlays = automaticUnderlays
+        } else if let capturedUnderlayImage {
+            underlays = Dictionary(
+                uniqueKeysWithValues: enabledCorners.map { ($0, capturedUnderlayImage) }
+            )
+        } else {
+            underlays = [:]
+        }
+        do {
+            let session = try PeelDesktopSession(
+                sourceWindowID: sourceWindowID,
+                sourceFrame: sourceFrame,
+                front: front,
+                underlays: underlays,
+                enabledCorners: enabledCorners,
+                maximumReach: reachSlider.doubleValue,
+                returnStrength: strengthSlider.doubleValue
+            )
+            session.onStop = { [weak self] reason in
+                self?.desktopSession = nil
+                self?.desktopButton.title = "Use on Desktop"
+                self?.captureStatusLabel.stringValue = reason
+                self?.updateDesktopAvailability()
+            }
+            desktopSession = session
+            desktopButton.title = "Stop Desktop"
+            captureStatusLabel.stringValue = "Desktop peel ready. Bring the selected window forward, then drag a corner."
+            session.start()
+        } catch {
+            captureStatusLabel.stringValue = "Desktop peel unavailable: \(error.localizedDescription)"
+        }
+    }
+
+    private func updateDesktopAvailability() {
+        desktopButton.isEnabled = desktopSession != nil || (
+            capturedFrontImage != nil &&
+            (usingAutomaticUnderlay
+                ? enabledCorners.contains { automaticUnderlays[$0] != nil }
+                : capturedUnderlayImage != nil)
+        )
     }
 
     @objc private func toggleCurlPreview() {
