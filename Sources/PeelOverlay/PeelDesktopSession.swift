@@ -117,7 +117,8 @@ public final class PeelDesktopSession {
         )
 
         for corner in activeCorners {
-            let size: CGFloat = 84
+            let appearance = PeelMarkerSettings()
+            let size = min(appearance.size, appKitFrame.width - 20, appKitFrame.height - 20)
             let inset: CGFloat = 10
             let position = corner.unitPoint
             let hotspotFrame = CGRect(
@@ -135,6 +136,7 @@ public final class PeelDesktopSession {
             hotspot.isOpaque = false
             hotspot.backgroundColor = .clear
             hotspot.hasShadow = false
+            hotspot.alphaValue = appearance.opacity
             hotspot.level = .screenSaver
             hotspot.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             let view = PeelDesktopHotspotView(frame: CGRect(origin: .zero, size: hotspotFrame.size))
@@ -338,7 +340,7 @@ public final class PeelDesktopSession {
         )
         overlay.setFrame(appKitFrame, display: false)
         for (corner, hotspot) in zip(activeCorners, hotspots) {
-            let size: CGFloat = 84
+            let size = min(PeelMarkerSettings().size, appKitFrame.width - 20, appKitFrame.height - 20)
             let inset: CGFloat = 10
             let point = corner.unitPoint
             hotspot.setFrame(CGRect(
@@ -376,7 +378,7 @@ private final class PeelDesktopHotspotView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         let marker = bounds.insetBy(dx: 3, dy: 3)
         let path = NSBezierPath(roundedRect: marker, xRadius: 14, yRadius: 14)
-        NSColor.systemTeal.withAlphaComponent(0.42).setFill()
+        PeelMarkerSettings().color.setFill()
         path.fill()
         NSColor.white.withAlphaComponent(0.9).setStroke()
         path.lineWidth = 2

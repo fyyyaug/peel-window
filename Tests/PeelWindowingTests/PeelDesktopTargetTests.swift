@@ -3,6 +3,17 @@ import Testing
 import PeelCore
 @testable import PeelWindowing
 
+@Test("The configured marker size changes how near the corner the pointer must be")
+func configurableCornerReach() {
+    let window = PeelDesktopTarget(id: 1, frame: CGRect(x: 0, y: 0, width: 400, height: 400), processID: 10)
+    let display = CGRect(x: 0, y: 0, width: 1000, height: 800)
+    let pointer = CGPoint(x: 330, y: 70)
+    #expect(PeelDesktopTarget.atCorner(pointer: pointer, frontToBack: [window],
+        enabledCorners: [.topRight], displayFrame: display, ownProcessID: 99, cornerReach: 40) == nil)
+    #expect(PeelDesktopTarget.atCorner(pointer: pointer, frontToBack: [window],
+        enabledCorners: [.topRight], displayFrame: display, ownProcessID: 99, cornerReach: 100) == window)
+}
+
 @Test("Every application's exposed corner can be targeted without activation")
 func cornersAcrossApplications() {
     let first = PeelDesktopTarget(id: 1, frame: CGRect(x: 0, y: 0, width: 300, height: 300), processID: 10)

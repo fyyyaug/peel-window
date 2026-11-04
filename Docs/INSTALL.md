@@ -36,3 +36,12 @@ public download experience.
 Project maintainers can rebuild the DMG with `Scripts/package-beta.sh` from
 the repository root. It signs the app locally with an ad hoc signature; it
 does not create an Apple Developer ID signature.
+
+## Corner marker preferences
+
+Open **PeelWindow → Settings…** (Command-comma) to adjust marker size (24–140
+points), opacity (10–100%), color, appearance delay (0–3 seconds), and visible
+duration (0–30 seconds). Zero duration keeps the marker visible while hovering.
+After a timed marker hides, leave and approach the corner to show it again.
+Dragging is never interrupted by the visible-duration setting. Preferences are
+saved automatically; the settings window includes a preview and reset button.

@@ -15,7 +15,7 @@ public struct PeelDesktopTarget: Equatable, Sendable {
     /// Input uses the Window Server's top-left screen coordinate system.
     public static func atCorner(
         pointer: CGPoint, frontToBack: [Self], enabledCorners: [PeelCorner],
-        displayFrame: CGRect, ownProcessID: Int32
+        displayFrame: CGRect, ownProcessID: Int32, cornerReach: CGFloat = 100
     ) -> Self? {
         guard let window = frontToBack.first(where: { $0.frame.contains(pointer) }),
               window.processID != ownProcessID,
@@ -25,7 +25,7 @@ public struct PeelDesktopTarget: Equatable, Sendable {
             let point = corner.unitPoint
             let x = point.x == 0 ? window.frame.minX : window.frame.maxX
             let y = point.y == 0 ? window.frame.maxY : window.frame.minY
-            return abs(pointer.x - x) <= 100 && abs(pointer.y - y) <= 100
+            return abs(pointer.x - x) <= cornerReach && abs(pointer.y - y) <= cornerReach
         } ? window : nil
     }
 }
