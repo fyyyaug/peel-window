@@ -1,5 +1,6 @@
 import CoreGraphics
 import CoreImage
+import MetalKit
 import Testing
 import PeelCore
 @testable import PeelRenderer
@@ -170,6 +171,66 @@ func nativePageCurlRenders() {
         #expect(output?.extent == extent)
         if let output {
             #expect(context.createCGImage(output, from: extent) != nil)
+        }
+    }
+}
+
+@Test("The desktop background shows through transparent window corners")
+@MainActor
+func desktopCornerTransparency() throws {
+    let width = 128
+    let height = 80
+    let extent = CGRect(x: 0, y: 0, width: width, height: height)
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let queue = try #require(device.makeCommandQueue())
+    let view = MTKView(frame: extent, device: device)
+    let renderer = try #require(PeelMetalRenderer(view: view))
+    renderer.fillsView = true
+    renderer.highlightedCorners = []
+    renderer.mtkView(view, drawableSizeWillChange: extent.size)
+
+    let context = CIContext()
+    let edge = CIImage(color: CIColor(red: 1, green: 0, blue: 0, alpha: 0.5))
+        .cropped(to: extent.insetBy(dx: 6, dy: 6))
+    let center = CIImage(color: CIColor(red: 1, green: 0, blue: 0))
+        .cropped(to: extent.insetBy(dx: 12, dy: 12))
+    let background = CIImage(color: CIColor(red: 0, green: 0, blue: 1)).cropped(to: extent)
+    let front = try #require(context.createCGImage(center.composited(over: edge), from: extent))
+    let lower = try #require(context.createCGImage(background, from: extent))
+    try renderer.showSnapshots(front: front, underneath: lower)
+
+    let textureDescriptor = MTLTextureDescriptor.texture2DDescriptor(
+        pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false
+    )
+    textureDescriptor.storageMode = .shared
+    textureDescriptor.usage = .renderTarget
+    let texture = try #require(device.makeTexture(descriptor: textureDescriptor))
+    let pass = MTLRenderPassDescriptor()
+    pass.colorAttachments[0].texture = texture
+    pass.colorAttachments[0].loadAction = .clear
+    pass.colorAttachments[0].storeAction = .store
+
+    let cornerPixels = [(0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1)]
+    for progress in [0.0, 0.05, 0.0] {
+        renderer.pose = PeelPose(corner: .topRight, pull: PeelPoint(x: -0.3, y: -0.3),
+                                 progress: progress, lift: progress)
+        let commands = try #require(queue.makeCommandBuffer())
+        try #require(renderer.encodeFrame(to: pass, commandBuffer: commands))
+        commands.commit()
+        commands.waitUntilCompleted()
+        try #require(commands.status == .completed)
+
+        for (x, y) in cornerPixels {
+            var pixel = [UInt8](repeating: 0, count: 4)
+            texture.getBytes(&pixel, bytesPerRow: 4, from: MTLRegionMake2D(x, y, 1, 1), mipmapLevel: 0)
+            #expect(pixel[0] > 180 && pixel[1] < 15 && pixel[2] < 15 && pixel[3] == 255)
+        }
+        if progress == 0 {
+            var edgePixel = [UInt8](repeating: 0, count: 4)
+            texture.getBytes(&edgePixel, bytesPerRow: 4,
+                             from: MTLRegionMake2D(8, height / 2, 1, 1), mipmapLevel: 0)
+            #expect((126...129).contains(edgePixel[0]))
+            #expect((126...129).contains(edgePixel[2]))
         }
     }
 }

@@ -69,12 +69,12 @@ fragment float4 peelSnapshotFragment(
     constant float4 &enabledCorners [[buffer(0)]]
 ) {
     constexpr sampler imageSampler(filter::linear, address::clamp_to_edge);
-    float3 color = snapshot.sample(imageSampler, input.textureCoordinate).rgb;
-    color = mix(color, float3(1.0, 0.48, 0.22),
+    float4 pixel = snapshot.sample(imageSampler, input.textureCoordinate);
+    float3 color = mix(pixel.rgb, float3(1.0, 0.48, 0.22) * pixel.a,
                 cornerGlow(input.textureCoordinate, enabledCorners) * 0.55);
     float light = 1.0 + input.curl * 0.28;
     float shadow = 1.0 - input.curl * input.curl * 0.18;
-    return float4(color * light * shadow, 1.0);
+    return float4(color * light * shadow, pixel.a);
 }
 
 fragment float4 peelUnderlayFragment(

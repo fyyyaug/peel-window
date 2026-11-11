@@ -164,9 +164,17 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
             return nil
         }
         descriptor.fragmentFunction = snapshotFunction
+        let snapshotAttachment = descriptor.colorAttachments[0]!
+        snapshotAttachment.isBlendingEnabled = true
+        // Window snapshots carry premultiplied color, including at rounded edges.
+        snapshotAttachment.sourceRGBBlendFactor = .one
+        snapshotAttachment.destinationRGBBlendFactor = .oneMinusSourceAlpha
+        snapshotAttachment.sourceAlphaBlendFactor = .one
+        snapshotAttachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
         guard let snapshotPipelineState = try? device.makeRenderPipelineState(descriptor: descriptor) else {
             return nil
         }
+        snapshotAttachment.isBlendingEnabled = false
         descriptor.fragmentFunction = underlayFunction
         guard
             let underlayPipelineState = try? device.makeRenderPipelineState(descriptor: descriptor),
@@ -245,12 +253,18 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         guard
             let descriptor = view.currentRenderPassDescriptor,
             let drawable = view.currentDrawable,
-            let vertexBuffer,
-            let commandBuffer = commandQueue.makeCommandBuffer()
+            let commandBuffer = commandQueue.makeCommandBuffer(),
+            encodeFrame(to: descriptor, commandBuffer: commandBuffer)
         else {
             return
         }
+        commandBuffer.present(drawable)
+        commandBuffer.commit()
+        lastFrameDuration = CACurrentMediaTime() - frameStart
+    }
 
+    func encodeFrame(to descriptor: MTLRenderPassDescriptor, commandBuffer: MTLCommandBuffer) -> Bool {
+        guard let vertexBuffer else { return false }
         var renderedPageCurl = false
         if let frontCIImage, let pageCurlTexture, pose.progress > 0.001,
            let output = PeelPageCurl.image(
@@ -273,7 +287,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         }
 
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
-            return
+            return false
         }
 
         if renderedPageCurl, let pageCurlTexture, let flatVertexBuffer {
@@ -294,10 +308,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
                 indexBufferOffset: 0
             )
             encoder.endEncoding()
-            commandBuffer.present(drawable)
-            commandBuffer.commit()
-            lastFrameDuration = CACurrentMediaTime() - frameStart
-            return
+            return true
         }
 
         if let underlayTexture, let flatVertexBuffer {
@@ -344,9 +355,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
             indexBufferOffset: 0
         )
         encoder.endEncoding()
-        commandBuffer.present(drawable)
-        commandBuffer.commit()
-        lastFrameDuration = CACurrentMediaTime() - frameStart
+        return true
     }
 
     public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
