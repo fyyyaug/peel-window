@@ -1,4 +1,5 @@
 import CoreImage
+import CoreImage.CIFilterBuiltins
 import MetalKit
 import PeelCore
 
@@ -117,6 +118,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     public private(set) var lastFrameDuration: TimeInterval = 0
 
     private let mesh: PeelMesh
+    private let preservesWindowShape: Bool
     private let commandQueue: MTLCommandQueue
     private let pipelineState: MTLRenderPipelineState
     private let snapshotPipelineState: MTLRenderPipelineState
@@ -137,7 +139,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
     private var drawableSize = CGSize(width: 1, height: 1)
     private var previewLayout: PeelPreviewLayout?
 
-    public init?(view: MTKView, mesh: PeelMesh = .init()) {
+    public init?(view: MTKView, mesh: PeelMesh = .init(), preservesWindowShape: Bool = false) {
         guard
             let device = view.device ?? MTLCreateSystemDefaultDevice(),
             let commandQueue = device.makeCommandQueue(),
@@ -187,6 +189,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         }
 
         self.mesh = mesh
+        self.preservesWindowShape = preservesWindowShape
         self.commandQueue = commandQueue
         self.pipelineState = pipelineState
         self.snapshotPipelineState = snapshotPipelineState
@@ -198,7 +201,12 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
 
         view.device = device
         view.colorPixelFormat = .bgra8Unorm
-        view.clearColor = MTLClearColor(red: 0.055, green: 0.067, blue: 0.105, alpha: 1)
+        if preservesWindowShape {
+            view.layer?.isOpaque = false
+            view.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
+        } else {
+            view.clearColor = MTLClearColor(red: 0.055, green: 0.067, blue: 0.105, alpha: 1)
+        }
         view.preferredFramesPerSecond = 60
         view.enableSetNeedsDisplay = true
         view.isPaused = true
@@ -258,8 +266,14 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
         else {
             return
         }
-        commandBuffer.present(drawable)
-        commandBuffer.commit()
+        if view.presentsWithTransaction {
+            commandBuffer.commit()
+            commandBuffer.waitUntilScheduled()
+            drawable.present()
+        } else {
+            commandBuffer.present(drawable)
+            commandBuffer.commit()
+        }
         lastFrameDuration = CACurrentMediaTime() - frameStart
     }
 
@@ -276,8 +290,19 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
                 maximumSize: maximumReach
            ) {
             let bounds = CGRect(x: 0, y: 0, width: pageCurlTexture.width, height: pageCurlTexture.height)
+            var frame = output
+            if preservesWindowShape {
+                // Clip the complete curl, including the lower snapshot and paper backside,
+                // to the source window's stationary silhouette.
+                let clip = CIFilter.blendWithAlphaMask()
+                clip.inputImage = output
+                clip.backgroundImage = CIImage.empty().cropped(to: bounds)
+                clip.maskImage = frontCIImage
+                guard let clipped = clip.outputImage else { return false }
+                frame = clipped
+            }
             ciContext.render(
-                output,
+                frame,
                 to: pageCurlTexture,
                 commandBuffer: commandBuffer,
                 bounds: bounds,
@@ -285,6 +310,7 @@ public final class PeelMetalRenderer: NSObject, MTKViewDelegate {
             )
             renderedPageCurl = true
         }
+        guard !preservesWindowShape || renderedPageCurl else { return false }
 
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
             return false

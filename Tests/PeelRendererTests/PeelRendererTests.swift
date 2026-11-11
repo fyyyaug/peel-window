@@ -175,16 +175,21 @@ func nativePageCurlRenders() {
     }
 }
 
-@Test("The desktop background shows through transparent window corners")
+@Test("Desktop curls preserve the window silhouette and previews blend transparent pixels",
+      arguments: [false, true])
 @MainActor
-func desktopCornerTransparency() throws {
+func desktopCornerTransparency(preservesWindowShape: Bool) throws {
     let width = 128
     let height = 80
     let extent = CGRect(x: 0, y: 0, width: width, height: height)
     let device = try #require(MTLCreateSystemDefaultDevice())
     let queue = try #require(device.makeCommandQueue())
     let view = MTKView(frame: extent, device: device)
-    let renderer = try #require(PeelMetalRenderer(view: view))
+    let renderer = try #require(PeelMetalRenderer(view: view, preservesWindowShape: preservesWindowShape))
+    if preservesWindowShape {
+        #expect(view.layer?.isOpaque == false)
+        #expect(view.clearColor.alpha == 0)
+    }
     renderer.fillsView = true
     renderer.highlightedCorners = []
     renderer.mtkView(view, drawableSizeWillChange: extent.size)
@@ -211,11 +216,16 @@ func desktopCornerTransparency() throws {
     pass.colorAttachments[0].storeAction = .store
 
     let cornerPixels = [(0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1)]
-    for progress in [0.0, 0.05, 0.0] {
+    for progress in [0.0, 0.05, 0.8, 0.05, 0.0] {
         renderer.pose = PeelPose(corner: .topRight, pull: PeelPoint(x: -0.3, y: -0.3),
                                  progress: progress, lift: progress)
         let commands = try #require(queue.makeCommandBuffer())
-        try #require(renderer.encodeFrame(to: pass, commandBuffer: commands))
+        let encoded = renderer.encodeFrame(to: pass, commandBuffer: commands)
+        if preservesWindowShape && progress == 0 {
+            #expect(!encoded)
+            continue
+        }
+        try #require(encoded)
         commands.commit()
         commands.waitUntilCompleted()
         try #require(commands.status == .completed)
@@ -223,7 +233,21 @@ func desktopCornerTransparency() throws {
         for (x, y) in cornerPixels {
             var pixel = [UInt8](repeating: 0, count: 4)
             texture.getBytes(&pixel, bytesPerRow: 4, from: MTLRegionMake2D(x, y, 1, 1), mipmapLevel: 0)
-            #expect(pixel[0] > 180 && pixel[1] < 15 && pixel[2] < 15 && pixel[3] == 255)
+            if preservesWindowShape {
+                #expect(pixel == [0, 0, 0, 0])
+            } else if progress < 0.8 {
+                #expect(pixel[0] > 180 && pixel[1] < 15 && pixel[2] < 15 && pixel[3] == 255)
+            }
+        }
+        if preservesWindowShape {
+            var edgePixel = [UInt8](repeating: 0, count: 4)
+            texture.getBytes(&edgePixel, bytesPerRow: 4,
+                             from: MTLRegionMake2D(8, height / 2, 1, 1), mipmapLevel: 0)
+            #expect((126...129).contains(edgePixel[3]))
+            var centerPixel = [UInt8](repeating: 0, count: 4)
+            texture.getBytes(&centerPixel, bytesPerRow: 4,
+                             from: MTLRegionMake2D(width / 2, height / 2, 1, 1), mipmapLevel: 0)
+            #expect(centerPixel[3] == 255)
         }
         if progress == 0 {
             var edgePixel = [UInt8](repeating: 0, count: 4)

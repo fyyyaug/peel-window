@@ -84,7 +84,7 @@ public final class PeelDesktopSession {
             throw PeelDesktopError.rendererUnavailable
         }
         let metalView = MTKView(frame: CGRect(origin: .zero, size: appKitFrame.size), device: device)
-        guard let renderer = PeelMetalRenderer(view: metalView) else {
+        guard let renderer = PeelMetalRenderer(view: metalView, preservesWindowShape: true) else {
             throw PeelDesktopError.rendererUnavailable
         }
         renderer.fillsView = true
@@ -223,9 +223,6 @@ public final class PeelDesktopSession {
             timestamp: ProcessInfo.processInfo.systemUptime
         )
         renderer.pose = gestureMachine.pose
-        overlay.orderFrontRegardless()
-        for hotspot in hotspots { hotspot.orderFrontRegardless() }
-        metalView.draw()
     }
 
     func update(to location: CGPoint) {
@@ -234,8 +231,7 @@ public final class PeelDesktopSession {
             to: PeelPoint(x: location.x, y: location.y),
             timestamp: ProcessInfo.processInfo.systemUptime
         )
-        renderer.pose = gestureMachine.pose
-        metalView.draw()
+        displayPeel()
     }
 
     func end() {
@@ -258,14 +254,35 @@ public final class PeelDesktopSession {
 
     @objc private func advanceSettlement() {
         gestureMachine.advance(by: 1.0 / 60.0)
-        renderer.pose = gestureMachine.pose
-        metalView.draw()
         if gestureMachine.phase == .idle {
             settlementTimer?.invalidate()
             settlementTimer = nil
             overlay.orderOut(nil)
             onRest?()
+        } else {
+            displayPeel()
         }
+    }
+
+    private func displayPeel() {
+        let pose = gestureMachine.pose
+        guard pose.progress > 0.001 else {
+            overlay.orderOut(nil)
+            return
+        }
+        renderer.pose = pose
+        if overlay.isVisible {
+            metalView.draw()
+            return
+        }
+
+        // Show the panel and its first Metal frame in the same transaction.
+        CATransaction.begin()
+        metalView.presentsWithTransaction = true
+        overlay.orderFrontRegardless()
+        metalView.draw()
+        CATransaction.commit()
+        metalView.presentsWithTransaction = false
     }
 
     @objc private func checkSourceWindow() {

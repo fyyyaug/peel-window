@@ -33,6 +33,8 @@ public final class PeelWindowSnapshotter {
         configuration.width = max(1, Int(filter.contentRect.width * CGFloat(filter.pointPixelScale)))
         configuration.height = max(1, Int(filter.contentRect.height * CGFloat(filter.pointPixelScale)))
         configuration.showsCursor = false
+        configuration.ignoreShadowsSingleWindow = true
+        configuration.shouldBeOpaque = false
 
         return try await SCScreenshotManager.captureImage(
             contentFilter: filter,

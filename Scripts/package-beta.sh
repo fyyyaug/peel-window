@@ -5,7 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 derived_data="$project_root/build/DerivedData"
 release_app="$derived_data/Build/Products/Release/PeelWindow.app"
 staging="$project_root/dist/staging"
-image="$project_root/dist/PeelWindow-0.1.0-beta.4-macos-arm64.dmg"
+image="$project_root/dist/PeelWindow-0.1.0-beta.5-macos-arm64.dmg"
 
 xcodebuild -quiet \
   -project "$project_root/App/PeelWindow/PeelWindow.xcodeproj" \
