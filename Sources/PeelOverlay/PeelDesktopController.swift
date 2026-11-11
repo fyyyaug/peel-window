@@ -35,12 +35,12 @@ public final class PeelDesktopController: ObservableObject {
         UserDefaults.standard.set(value, forKey: "PeelDesktopEnabled")
         if value {
             startMonitoring()
-            onStatus?("Desktop mode on. Move to an enabled window corner and wait for its marker.")
+            onStatus?(String(localized: "Desktop mode on. Move to an enabled window corner and wait for its marker."))
         } else {
             timer?.invalidate()
             timer = nil
             clearSession()
-            onStatus?("Desktop mode off.")
+            onStatus?(String(localized: "Desktop mode off."))
         }
     }
 
@@ -171,7 +171,7 @@ public final class PeelDesktopController: ObservableObject {
                         session?.begin(at: prompt.downPoint, corner: prompt.pressedCorner)
                         session?.update(to: prompt.currentPoint)
                     }
-                    self?.onStatus?("Desktop mode on. Drag the corner marker.")
+                    self?.onStatus?(String(localized: "Desktop mode on. Drag the corner marker."))
                 }
                 newSession.onRest = { [weak self] in
                     self?.completedTarget = next
@@ -184,7 +184,7 @@ public final class PeelDesktopController: ObservableObject {
                 guard generation == revision else { return }
                 completedTarget = next
                 clearSession()
-                onStatus?("Desktop mode on; waiting for another supported window corner.")
+                onStatus?(String(localized: "Desktop mode on; waiting for another supported window corner."))
             }
         }
     }

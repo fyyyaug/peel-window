@@ -6,11 +6,11 @@ struct ContentView: View {
     var body: some View {
         TabView {
             DesktopPreferencesView()
-                .tabItem { Label("桌面翻页", systemImage: "macwindow.on.rectangle") }
+                .tabItem { Label("Desktop", systemImage: "macwindow.on.rectangle") }
             MarkerSettingsView()
-                .tabItem { Label("提示标记", systemImage: "cursorarrow.rays") }
+                .tabItem { Label("Corner Marker", systemImage: "cursorarrow.rays") }
             PeelDemoRepresentable()
-                .tabItem { Label("翻页预览", systemImage: "play.rectangle") }
+                .tabItem { Label("Peel Preview", systemImage: "play.rectangle") }
         }.tint(.teal)
     }
 }
@@ -35,11 +35,11 @@ private struct DesktopPreferencesView: View {
                             in: RoundedRectangle(cornerRadius: 22))
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Peel Window").font(.system(size: 29, weight: .semibold, design: .rounded))
-                        Text("轻轻翻开，看看窗口背后。")
+                        Text("Peel a window to see what’s behind it.")
                             .font(.title3).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Label(desktop.isEnabled ? "桌面模式已开启" : "桌面模式已关闭",
+                    Label(desktop.isEnabled ? String(localized: "Desktop Mode On") : String(localized: "Desktop Mode Off"),
                         systemImage: desktop.isEnabled ? "circle.fill" : "pause.circle")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(desktop.isEnabled ? Color.teal : Color.secondary)
@@ -48,50 +48,50 @@ private struct DesktopPreferencesView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Toggle(isOn: Binding(get: { desktop.isEnabled }, set: desktop.setEnabled)) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("桌面持续翻页").font(.headline)
-                            Text("开启一次，切换应用后仍可使用。")
+                            Text("Continuous Desktop Peeling").font(.headline)
+                            Text("Stays enabled when you switch apps.")
                                 .font(.subheadline).foregroundStyle(.secondary)
                         }
                     }.toggleStyle(.switch)
                     Divider()
                     HStack {
-                        Label(desktop.hasScreenAccess ? "录屏权限已就绪" : "需要屏幕录制权限",
+                        Label(desktop.hasScreenAccess ? String(localized: "Screen Recording Ready") : String(localized: "Screen Recording Permission Required"),
                             systemImage: desktop.hasScreenAccess ? "checkmark.shield" : "lock")
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Button(desktop.hasScreenAccess ? "重新检查" : "设置权限") {
+                        Button(desktop.hasScreenAccess ? String(localized: "Check Again") : String(localized: "Set Up Permission")) {
                             desktop.checkScreenAccess(request: true)
                         }
                     }
                 }.padding(20).background(.background, in: RoundedRectangle(cornerRadius: 18))
                 HStack(alignment: .top, spacing: 18) {
                     VStack(alignment: .leading, spacing: 15) {
-                        Label("可以从哪些角落翻开", systemImage: "viewfinder").font(.headline)
+                        Label("Enabled Corners", systemImage: "viewfinder").font(.headline)
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            cornerToggle(.topLeft, "左上角", "arrow.up.left")
-                            cornerToggle(.topRight, "右上角", "arrow.up.right")
-                            cornerToggle(.bottomLeft, "左下角", "arrow.down.left")
-                            cornerToggle(.bottomRight, "右下角", "arrow.down.right")
+                            cornerToggle(.topLeft, "Top Left", "arrow.up.left")
+                            cornerToggle(.topRight, "Top Right", "arrow.up.right")
+                            cornerToggle(.bottomLeft, "Bottom Left", "arrow.down.left")
+                            cornerToggle(.bottomRight, "Bottom Right", "arrow.down.right")
                         }
-                        Text("至少保留一个角落。翻动方向会随鼠标移动而改变。")
+                        Text("Keep at least one corner enabled. Pointer movement steers the fold.")
                             .font(.caption).foregroundStyle(.secondary)
                     }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
                         .background(.background, in: RoundedRectangle(cornerRadius: 18))
                     VStack(alignment: .leading, spacing: 16) {
-                        Label("翻页手感", systemImage: "slider.horizontal.3").font(.headline)
-                        sliderTitle("最大翻开范围", "\(Int((reach * 100).rounded()))%")
+                        Label("Peel Behavior", systemImage: "slider.horizontal.3").font(.headline)
+                        sliderTitle("Maximum Peel Size", reach.formatted(.percent.precision(.fractionLength(0))))
                         Slider(value: $reach, in: 0.1...1, step: 0.01)
-                        sliderTitle("回弹力度", String(format: "%.2f×", strength))
+                        sliderTitle("Return Strength", strength.formatted(.number.precision(.fractionLength(2))) + "×")
                         Slider(value: $strength, in: 0.25...2, step: 0.05)
                     }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
                         .background(.background, in: RoundedRectangle(cornerRadius: 18))
                 }
                 VStack(alignment: .leading, spacing: 12) {
                     HoverDelayControl(delay: $delay)
-                    Text("在角落停留指定时间后显示标记；按住标记向内拖动，松手恢复。首次画面若未就绪，按住后会在准备好时接上。颜色、大小和显示时长可在“提示标记”中调整。")
+                    Text("Hover over a corner to show its marker. Drag the marker inward and release to restore the window. If the first image is still loading, keep holding to continue as soon as it’s ready. Adjust color, size, and duration in Corner Marker.")
                         .font(.callout).foregroundStyle(.secondary)
                 }.padding(20).background(.background, in: RoundedRectangle(cornerRadius: 18))
-                Label("当前支持主显示器内的普通窗口。翻页中显示静态画面，下一次翻页会重新捕获。",
+                Label("Supports standard windows fully on the main display. Each peel uses a fresh still image.",
                     systemImage: "info.circle")
                     .font(.caption).foregroundStyle(.secondary)
             }.padding(28).frame(maxWidth: 1000).frame(maxWidth: .infinity)
@@ -107,7 +107,7 @@ private struct DesktopPreferencesView: View {
         .onChange(of: [reach, strength, delay]) { _, _ in desktop.settingsChanged() }
     }
 
-    private func sliderTitle(_ title: String, _ value: String) -> some View {
+    private func sliderTitle(_ title: LocalizedStringKey, _ value: String) -> some View {
         HStack {
             Text(title).font(.subheadline.weight(.medium))
             Spacer()
@@ -115,7 +115,7 @@ private struct DesktopPreferencesView: View {
         }
     }
 
-    private func cornerToggle(_ corner: PeelCorner, _ title: String, _ symbol: String) -> some View {
+    private func cornerToggle(_ corner: PeelCorner, _ title: LocalizedStringKey, _ symbol: String) -> some View {
         Toggle(isOn: Binding(get: { corners.contains(corner.rawValue) }, set: { enabled in
             if enabled { corners.insert(corner.rawValue) }
             else if corners.count > 1 { corners.remove(corner.rawValue) }

@@ -10,11 +10,11 @@ public enum PeelCaptureError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .windowUnavailable:
-            "The selected window is no longer available. Refresh the window list."
+            String(localized: "The selected window is no longer available. Refresh the window list.")
         case .sourceNotOnScreen:
-            "The selected window is not visible on the current desktop."
+            String(localized: "The selected window is not visible on the current desktop.")
         case .desktopUnavailable(let detail):
-            "The desktop behind the selected window could not be captured: \(detail)"
+            String(localized: "The desktop behind the selected window could not be captured: \(detail)")
         }
     }
 }
@@ -50,9 +50,9 @@ public final class PeelWindowSnapshotter {
             onScreenWindowsOnly: false
         )
         guard let display = content.displays.first(where: { $0.displayID == CGMainDisplayID() })
-        else { throw PeelCaptureError.desktopUnavailable("main display missing") }
+        else { throw PeelCaptureError.desktopUnavailable(String(localized: "main display missing")) }
         guard content.windows.contains(where: { $0.windowID == windowID })
-        else { throw PeelCaptureError.desktopUnavailable("source window missing") }
+        else { throw PeelCaptureError.desktopUnavailable(String(localized: "source window missing")) }
         let visibleWindowIDs = (CGWindowListCopyWindowInfo(
             .optionOnScreenOnly,
             kCGNullWindowID
@@ -87,9 +87,10 @@ public final class PeelWindowSnapshotter {
             sourceFrame: windowFrame,
             outputSize: outputSize
         ) else {
-            throw PeelCaptureError.desktopUnavailable(
-                "crop outside display: display \(display.frame), window \(windowFrame), image \(screenshot.width)x\(screenshot.height)"
-            )
+            let displayBounds = String(describing: display.frame)
+            let windowBounds = String(describing: windowFrame)
+            let detail = String(localized: "crop outside display: display \(displayBounds), window \(windowBounds), image \(screenshot.width)x\(screenshot.height)")
+            throw PeelCaptureError.desktopUnavailable(detail)
         }
         return cropped
     }

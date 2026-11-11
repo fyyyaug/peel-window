@@ -44,19 +44,23 @@ struct MarkerSettingsView: View {
 
     var body: some View {
         Form {
-            Section("角落提示标记") {
+            Section("Corner Marker") {
                 Slider(value: $size, in: 24...140, step: 2) {
-                    Text("大小：\(Int(size)) 点")
+                    Text("Size: \(Int(size)) pt")
                 }
                 Slider(value: $opacity, in: 0.1...1, step: 0.05) {
-                    Text("不透明度：\(Int((opacity * 100).rounded()))%")
+                    Text("Opacity: \(opacity.formatted(.percent.precision(.fractionLength(0))))")
                 }
-                ColorPicker("颜色", selection: markerColor, supportsOpacity: false)
+                ColorPicker("Color", selection: markerColor, supportsOpacity: false)
                 HoverDelayControl(delay: $delay)
                 Slider(value: $duration, in: 0...30, step: 1) {
-                    Text(duration == 0 ? "显示时长：停留期间一直显示" : "显示时长：\(Int(duration)) 秒")
+                    if duration == 0 {
+                        Text("Visible while hovering")
+                    } else {
+                        Text("Visible for \(Int(duration)) s")
+                    }
                 }
-                Text("鼠标靠近角落时提前准备画面，标记按悬停时间显示。显示时长设为 0 时持续显示；自动隐藏后，移开鼠标再靠近即可重新显示。拖动期间不会自动隐藏。")
+                Text("The image starts loading as you approach a corner. Set the duration to 0 to keep the marker visible while hovering. If it hides, move away and back to show it again. The marker stays visible while dragging.")
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Spacer()
@@ -66,7 +70,7 @@ struct MarkerSettingsView: View {
                         .frame(width: size, height: size)
                     Spacer()
                 }.frame(height: 150)
-                Button("恢复默认设置") {
+                Button("Restore Defaults") {
                     size = 84; opacity = 0.42; delay = 0; duration = 0
                     red = 0; green = 0.7; blue = 0.72
                 }
@@ -86,17 +90,17 @@ struct HoverDelayControl: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("鼠标悬停生效时间").font(.subheadline.weight(.medium))
+                Text("Hover Activation Time").font(.subheadline.weight(.medium))
                 Spacer()
-                TextField("秒", value: $delay, format: .number.precision(.fractionLength(3)))
+                TextField("s", value: $delay, format: .number.precision(.fractionLength(3)))
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 90)
-                    .accessibilityLabel("鼠标悬停生效时间，秒")
-                Text("秒").foregroundStyle(.secondary)
+                    .accessibilityLabel("Hover activation time in seconds")
+                Text("s").foregroundStyle(.secondary)
             }
             Slider(value: $delay, in: 0...10, step: 0.001)
-            Text("可直接输入 0.100、0.010 或 0.001 秒；0 表示立即准备。达到设定时间即显示标记；首次画面若未就绪，按住拖动会在准备好后接上。")
+            Text("Enter a delay to the nearest millisecond. Set it to 0 to show the marker immediately. If the first image is still loading, keep holding to continue when it’s ready.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .onChange(of: delay) { _, value in

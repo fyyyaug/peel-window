@@ -1,16 +1,18 @@
 # Peel Window User Guide
 
-[中文](USER_GUIDE_ZH.md) · [Download page](https://github.com/fyyyaug/peel-window/releases/tag/v0.1.0-beta.1)
+[中文](USER_GUIDE_ZH.md) · [Download page](https://github.com/fyyyaug/peel-window/releases/tag/v0.1.0-beta.2)
 
 Peel Window temporarily curls a window like a book page, revealing the view behind it. Release the mouse to let the window spring back.
 
 ## 1. Download and install
 
 - Requires an Apple silicon Mac (M series) running macOS 14 or later.
-- Download [PeelWindow-0.1.0-macos-arm64.dmg](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.1/PeelWindow-0.1.0-macos-arm64.dmg). This is the only download required. You do not need Source code, Xcode, or additional dependencies.
+- Download [PeelWindow-0.1.0-macos-arm64.dmg](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.2/PeelWindow-0.1.0-macos-arm64.dmg). This is the only download required. You do not need Source code, Xcode, or additional dependencies.
 - Open the DMG, drag `PeelWindow.app` into `Applications`, then launch it from Applications.
 
 This beta is not notarized by Apple. If macOS blocks the first launch, first attempt to open it, then go to **System Settings → Privacy & Security** and choose **Open Anyway** for PeelWindow. Only approve an application whose source you trust.
+
+Peel Window uses the first supported language in your macOS preferences and falls back to English when none matches. To choose a different language for Peel Window, open **System Settings → General → Language & Region → Applications** and reopen the app.
 
 ## 2. First launch: allow screen recording
 
@@ -39,13 +41,13 @@ The marker can appear before the first image is ready. If you press and drag whi
 | --- | --- |
 | Continuous Desktop Peeling (`桌面持续翻页`) | Turns desktop peeling on or off. The app menu also provides Enable Desktop Peeling. |
 | Four corners | Independently enable the top left, top right, bottom left, and bottom right corners. Keep at least one enabled. These settings control where a drag may begin. |
-| Maximum peel size (`最大翻开范围`) | 10–100%; limits the maximum exposed area. |
-| Return strength (`回弹力度`) | 0.25–2×; adjusts the spring return after release. |
-| Hover activation time (`鼠标悬停生效时间`) | 0–10 seconds. Type three decimal places, such as `0.100`, `0.010`, or `0.001`. Set `0` to add no intentional delay. |
+| Maximum Peel Size (`最大翻开范围`) | 10–100%; limits the maximum exposed area. |
+| Return Strength (`回弹力度`) | 0.25–2×; adjusts the spring return after release. |
+| Hover Activation Time (`鼠标悬停生效时间`) | 0–10 seconds. Type three decimal places, such as `0.100`, `0.010`, or `0.001`. Set `0` to add no intentional delay. |
 
 Zero delay does not mean zero physical latency: pointer detection, display refresh, and image preparation still take time. The app prepares images as the pointer approaches a corner. Displaying the marker no longer waits for screenshot completion.
 
-## 5. Marker page (`提示标记`)
+## 5. Corner Marker page (`提示标记`)
 
 You can also open marker preferences through **PeelWindow → Settings…** or `⌘,`.
 
@@ -54,7 +56,7 @@ You can also open marker preferences through **PeelWindow → Settings…** or `
 | Size (`大小`) | 24–140 points. Small windows automatically limit marker size to keep it inside the window. |
 | Opacity (`不透明度`) | 10–100%; lower values are more transparent. |
 | Color (`颜色`) | Choose a custom color using the color picker. |
-| Hover activation time (`鼠标悬停生效时间`) | Shared with the Desktop page; controls how long to hover before the marker appears. |
+| Hover Activation Time (`鼠标悬停生效时间`) | Shared with the Desktop page; controls how long to hover before the marker appears. |
 | Visible duration (`显示时长`) | 0–30 seconds. `0` keeps the marker visible while hovering. |
 | Restore Defaults (`恢复默认设置`) | Resets marker appearance and timing, without changing maximum peel size or return strength. |
 
@@ -62,7 +64,7 @@ A preview shows the marker appearance. After a timed marker hides, move away and
 
 Preferences are saved automatically, including the desktop-mode switch, and restored when you relaunch the app. Launch the app manually; this version does not add a login item.
 
-## 6. Preview page (`翻页预览`)
+## 6. Peel Preview page (`翻页预览`)
 
 - **Sample Pair** loads built-in sample images without capturing real windows.
 - **Preview 50%** shows a still curl. Click Resume to return to interaction.

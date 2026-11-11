@@ -11,16 +11,19 @@ snapshots while a page is curled, so changing content requires a new Capture.
    Developer ID signature or Apple notarization. If macOS blocks the first
    launch, open **System Settings → Privacy & Security** and use **Open Anyway**
    for PeelWindow. Do not disable Gatekeeper globally.
-3. In PeelWindow, click **Find Windows**. macOS will ask for **Screen & System
-   Audio Recording** access. Allow PeelWindow and restart it if prompted.
-4. Click **Enable Desktop**, or use **PeelWindow → Enable Desktop Peeling**.
-   The switch is retained across launches. No manual window selection is needed.
+3. On the **Desktop** tab, click **Set Up Permission**. Allow PeelWindow in
+   **Screen & System Audio Recording**, then restart it if macOS asks.
+4. Turn on **Continuous Desktop Peeling**, or use **PeelWindow → Enable Desktop Peeling**.
+   The switch is retained across launches.
 5. Move the pointer near an enabled, exposed corner of any supported window.
    Wait for its teal marker, then drag inward. Release to restore the window.
    Move away and approach a corner again to prepare a fresh snapshot.
 6. Application switches, window movement, and closing a window retire only that
    window's overlay. Desktop mode stays enabled and prepares the next corner.
-   Turn it off using **Disable Desktop** or the application menu option.
+   Turn it off with the same switch or application menu option.
+
+PeelWindow follows your macOS language preferences and uses English when no
+supported language matches. The control names in this guide are in English.
 
 The current desktop renderer supports windows fully on the main display.
 Unsupported windows are skipped while desktop mode remains enabled.
@@ -46,7 +49,7 @@ After a timed marker hides, leave and approach the corner to show it again.
 Dragging is never interrupted by the visible-duration setting. Preferences are
 saved automatically; the settings window includes a preview and reset button.
 
-The main window has Desktop, Marker, and Preview tabs. Desktop includes the
+The main window has Desktop, Corner Marker, and Peel Preview tabs. Desktop includes the
 persistent switch, four corner choices, maximum reach, spring strength, and hover
 activation time. The Marker tab includes all appearance and timing preferences.
 

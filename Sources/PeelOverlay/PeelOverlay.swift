@@ -12,23 +12,23 @@ public final class PeelDemoView: NSView {
     private let metalView: MTKView
     private let renderer: PeelMetalRenderer
     private let statusLabel = NSTextField(labelWithString: "")
-    private let hintLabel = NSTextField(labelWithString: "Drag an enabled corner inward; direction steers the fold")
-    private let topLeftButton = NSButton(checkboxWithTitle: "Top left", target: nil, action: nil)
-    private let topRightButton = NSButton(checkboxWithTitle: "Top right", target: nil, action: nil)
-    private let bottomLeftButton = NSButton(checkboxWithTitle: "Bottom left", target: nil, action: nil)
-    private let bottomRightButton = NSButton(checkboxWithTitle: "Bottom right", target: nil, action: nil)
-    private let strengthLabel = NSTextField(labelWithString: "Return strength: 1.00x")
+    private let hintLabel = NSTextField(labelWithString: String(localized: "Drag an enabled corner inward; direction steers the fold"))
+    private let topLeftButton = NSButton(checkboxWithTitle: String(localized: "Top Left"), target: nil, action: nil)
+    private let topRightButton = NSButton(checkboxWithTitle: String(localized: "Top Right"), target: nil, action: nil)
+    private let bottomLeftButton = NSButton(checkboxWithTitle: String(localized: "Bottom Left"), target: nil, action: nil)
+    private let bottomRightButton = NSButton(checkboxWithTitle: String(localized: "Bottom Right"), target: nil, action: nil)
+    private let strengthLabel = NSTextField(labelWithString: "")
     private let strengthSlider = NSSlider(value: 1, minValue: 0.25, maxValue: 2, target: nil, action: nil)
-    private let reachLabel = NSTextField(labelWithString: "Maximum peel size: 82%")
+    private let reachLabel = NSTextField(labelWithString: "")
     private let reachSlider = NSSlider(value: 0.82, minValue: 0.1, maxValue: 1, target: nil, action: nil)
     private let frontPopup = NSPopUpButton(frame: .zero, pullsDown: false)
     private let underneathPopup = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let refreshButton = NSButton(title: "Find Windows", target: nil, action: nil)
-    private let captureButton = NSButton(title: "Capture", target: nil, action: nil)
-    private let demoButton = NSButton(title: "Sample Pair", target: nil, action: nil)
-    private let previewButton = NSButton(title: "Preview 50%", target: nil, action: nil)
-    private let desktopButton = NSButton(title: "Use on Desktop", target: nil, action: nil)
-    private let captureStatusLabel = NSTextField(labelWithString: "Choose Find Windows to load a real window snapshot")
+    private let refreshButton = NSButton(title: String(localized: "Find Windows"), target: nil, action: nil)
+    private let captureButton = NSButton(title: String(localized: "Capture"), target: nil, action: nil)
+    private let demoButton = NSButton(title: String(localized: "Sample Pair"), target: nil, action: nil)
+    private let previewButton = NSButton(title: String(localized: "Preview 50%"), target: nil, action: nil)
+    private let desktopButton = NSButton(title: String(localized: "Use on Desktop"), target: nil, action: nil)
+    private let captureStatusLabel = NSTextField(labelWithString: String(localized: "Choose Find Windows to load a real window snapshot"))
     private let windowCatalog = PeelWindowCatalog()
     private let windowStackResolver = PeelWindowStackResolver()
     private let snapshotter = PeelWindowSnapshotter()
@@ -84,11 +84,7 @@ public final class PeelDemoView: NSView {
             ?? 0.82
         reachSlider.doubleValue = min(max(savedReach, 0.1), 1)
         renderer.maximumReach = reachSlider.doubleValue
-        reachLabel.stringValue = String(format: "Maximum peel size: %.0f%%", reachSlider.doubleValue * 100)
-        strengthLabel.stringValue = String(
-            format: "Return strength: %.2fx",
-            strengthSlider.doubleValue
-        )
+        updateSliderLabels()
         gestureMachine = PeelGestureMachine(configuration: gestureConfiguration())
 
         wantsLayer = true
@@ -144,8 +140,8 @@ public final class PeelDemoView: NSView {
         underneathPopup.translatesAutoresizingMaskIntoConstraints = false
         frontPopup.appearance = NSAppearance(named: .darkAqua)
         underneathPopup.appearance = NSAppearance(named: .darkAqua)
-        frontPopup.addItem(withTitle: "Front window")
-        underneathPopup.addItem(withTitle: "Window underneath (optional)")
+        frontPopup.addItem(withTitle: String(localized: "Front window"))
+        underneathPopup.addItem(withTitle: String(localized: "Window underneath (optional)"))
         addSubview(frontPopup)
         addSubview(underneathPopup)
         frontPopup.target = self
@@ -174,6 +170,8 @@ public final class PeelDemoView: NSView {
 
         captureStatusLabel.translatesAutoresizingMaskIntoConstraints = false
         captureStatusLabel.font = .systemFont(ofSize: 12)
+        captureStatusLabel.maximumNumberOfLines = 3
+        captureStatusLabel.lineBreakMode = .byWordWrapping
         captureStatusLabel.textColor = NSColor.white.withAlphaComponent(0.8)
         addSubview(captureStatusLabel)
 
@@ -205,27 +203,23 @@ public final class PeelDemoView: NSView {
             reachSlider.topAnchor.constraint(equalTo: reachLabel.bottomAnchor, constant: 4),
             reachSlider.widthAnchor.constraint(equalToConstant: 160),
             frontPopup.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
-            frontPopup.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -24),
-            frontPopup.widthAnchor.constraint(equalToConstant: 240),
+            frontPopup.bottomAnchor.constraint(equalTo: refreshButton.topAnchor, constant: -8),
             underneathPopup.leadingAnchor.constraint(equalTo: frontPopup.trailingAnchor, constant: 12),
             underneathPopup.centerYAnchor.constraint(equalTo: frontPopup.centerYAnchor),
-            underneathPopup.widthAnchor.constraint(equalToConstant: 240),
-            refreshButton.leadingAnchor.constraint(equalTo: underneathPopup.trailingAnchor, constant: 12),
-            refreshButton.centerYAnchor.constraint(equalTo: frontPopup.centerYAnchor),
-            refreshButton.widthAnchor.constraint(equalToConstant: 120),
+            underneathPopup.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
+            underneathPopup.widthAnchor.constraint(equalTo: frontPopup.widthAnchor),
+            refreshButton.leadingAnchor.constraint(equalTo: frontPopup.leadingAnchor),
+            refreshButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -24),
             captureButton.leadingAnchor.constraint(equalTo: refreshButton.trailingAnchor, constant: 12),
-            captureButton.centerYAnchor.constraint(equalTo: frontPopup.centerYAnchor),
-            captureButton.widthAnchor.constraint(equalToConstant: 100),
+            captureButton.centerYAnchor.constraint(equalTo: refreshButton.centerYAnchor),
             demoButton.leadingAnchor.constraint(equalTo: captureButton.trailingAnchor, constant: 12),
-            demoButton.centerYAnchor.constraint(equalTo: frontPopup.centerYAnchor),
-            demoButton.widthAnchor.constraint(equalToConstant: 100),
+            demoButton.centerYAnchor.constraint(equalTo: refreshButton.centerYAnchor),
             previewButton.trailingAnchor.constraint(equalTo: strengthLabel.trailingAnchor),
             previewButton.topAnchor.constraint(equalTo: reachSlider.bottomAnchor, constant: 10),
-            previewButton.widthAnchor.constraint(equalToConstant: 120),
             desktopButton.trailingAnchor.constraint(equalTo: previewButton.leadingAnchor, constant: -10),
             desktopButton.centerYAnchor.constraint(equalTo: previewButton.centerYAnchor),
-            desktopButton.widthAnchor.constraint(equalToConstant: 140),
             captureStatusLabel.leadingAnchor.constraint(equalTo: frontPopup.leadingAnchor),
+            captureStatusLabel.trailingAnchor.constraint(lessThanOrEqualTo: underneathPopup.trailingAnchor),
             captureStatusLabel.bottomAnchor.constraint(equalTo: frontPopup.topAnchor, constant: -7),
         ])
 
@@ -240,8 +234,15 @@ public final class PeelDemoView: NSView {
         updateDesktopAvailability()
     }
 
+    private func updateSliderLabels() {
+        let strength = strengthSlider.doubleValue.formatted(.number.precision(.fractionLength(2))) + "×"
+        let reach = reachSlider.doubleValue.formatted(.percent.precision(.fractionLength(0)))
+        strengthLabel.stringValue = String(localized: "Return strength: \(strength)")
+        reachLabel.stringValue = String(localized: "Maximum peel size: \(reach)")
+    }
+
     @objc private func strengthChanged(_ sender: NSSlider) {
-        strengthLabel.stringValue = String(format: "Return strength: %.2fx", sender.doubleValue)
+        updateSliderLabels()
         UserDefaults.standard.set(sender.doubleValue, forKey: "PeelReturnStrength")
         PeelDesktopController.shared.settingsChanged()
         if gestureMachine.phase == .idle {
@@ -251,7 +252,7 @@ public final class PeelDemoView: NSView {
 
     @objc private func reachChanged(_ sender: NSSlider) {
         let reach = sender.doubleValue
-        reachLabel.stringValue = String(format: "Maximum peel size: %.0f%%", reach * 100)
+        updateSliderLabels()
         UserDefaults.standard.set(reach, forKey: "PeelMaximumReach")
         PeelDesktopController.shared.settingsChanged()
         renderer.maximumReach = reach
@@ -264,7 +265,7 @@ public final class PeelDemoView: NSView {
     @objc private func cornersChanged(_ sender: NSButton) {
         if enabledCorners.isEmpty {
             sender.state = .on
-            captureStatusLabel.stringValue = "Keep at least one corner enabled."
+            captureStatusLabel.stringValue = String(localized: "Keep at least one corner enabled.")
             return
         }
         UserDefaults.standard.set(enabledCorners.map(\.rawValue), forKey: "PeelEnabledCorners")
@@ -282,11 +283,11 @@ public final class PeelDemoView: NSView {
     @objc private func refreshWindows() {
         invalidateCapture()
         if !CGPreflightScreenCaptureAccess() && !CGRequestScreenCaptureAccess() {
-            captureStatusLabel.stringValue = "Allow PeelWindow in Screen & System Audio Recording, then restart the app."
+            captureStatusLabel.stringValue = String(localized: "Allow PeelWindow in Screen & System Audio Recording, then restart the app.")
             return
         }
         refreshButton.isEnabled = false
-        captureStatusLabel.stringValue = "Finding available windows…"
+        captureStatusLabel.stringValue = String(localized: "Finding available windows…")
         Task { @MainActor in
             defer { refreshButton.isEnabled = true }
             do {
@@ -294,10 +295,10 @@ public final class PeelDemoView: NSView {
                 populateWindowMenus(with: choices)
                 captureButton.isEnabled = !choices.isEmpty
                 captureStatusLabel.stringValue = choices.isEmpty
-                    ? "No supported windows are available."
-                    : "Select a front window and optionally a window underneath."
+                    ? String(localized: "No supported windows are available.")
+                    : String(localized: "Select a front window and optionally a window underneath.")
             } catch {
-                captureStatusLabel.stringValue = "Window discovery failed. Check Screen Recording permission, then restart PeelWindow: \(error.localizedDescription)"
+                captureStatusLabel.stringValue = String(localized: "Window discovery failed. Check Screen Recording permission, then restart PeelWindow: \(error.localizedDescription)")
             }
         }
     }
@@ -305,9 +306,9 @@ public final class PeelDemoView: NSView {
     private func populateWindowMenus(with choices: [PeelWindowChoice]) {
         frontPopup.removeAllItems()
         underneathPopup.removeAllItems()
-        frontPopup.addItem(withTitle: "Front window")
-        underneathPopup.addItem(withTitle: "Window underneath (optional)")
-        underneathPopup.addItem(withTitle: "Auto-detect actual window below")
+        frontPopup.addItem(withTitle: String(localized: "Front window"))
+        underneathPopup.addItem(withTitle: String(localized: "Window underneath (optional)"))
+        underneathPopup.addItem(withTitle: String(localized: "Auto-detect actual window below"))
         for choice in choices {
             frontPopup.addItem(withTitle: choice.displayName)
             frontPopup.lastItem?.representedObject = NSNumber(value: choice.id)
@@ -323,18 +324,18 @@ public final class PeelDemoView: NSView {
         let revision = captureRevision
         stopCurlPreview()
         guard let frontID = (frontPopup.selectedItem?.representedObject as? NSNumber)?.uint32Value else {
-            captureStatusLabel.stringValue = "Select a front window first."
+            captureStatusLabel.stringValue = String(localized: "Select a front window first.")
             return
         }
         let autoDetectUnderneath = underneathPopup.indexOfSelectedItem == 1
         let selectedUnderneathID = (underneathPopup.selectedItem?.representedObject as? NSNumber)?.uint32Value
         if selectedUnderneathID == frontID {
-            captureStatusLabel.stringValue = "Choose a different window for underneath."
+            captureStatusLabel.stringValue = String(localized: "Choose a different window for underneath.")
             return
         }
 
         captureButton.isEnabled = false
-        captureStatusLabel.stringValue = "Capturing selected window snapshots…"
+        captureStatusLabel.stringValue = String(localized: "Capturing selected window snapshots…")
         Task { @MainActor in
             defer {
                 if captureRevision == revision { captureButton.isEnabled = true }
@@ -387,14 +388,14 @@ public final class PeelDemoView: NSView {
                 metalView.draw()
                 captureStatusLabel.stringValue = autoDetectUnderneath
                     ? newAutomaticUnderlays.isEmpty
-                        ? "No lower preview window found. Desktop mode can capture the actual background."
-                        : "Front captured. Use on Desktop or drag a corner in the preview."
+                        ? String(localized: "No lower preview window found. Desktop mode can capture the actual background.")
+                        : String(localized: "Front captured. Use on Desktop or drag a corner in the preview.")
                     : underneathImage != nil
-                        ? "Two snapshots ready. Use on Desktop or drag a corner in the preview."
-                        : "Front captured. Desktop mode can capture the actual background."
+                        ? String(localized: "Two snapshots ready. Use on Desktop or drag a corner in the preview.")
+                        : String(localized: "Front captured. Desktop mode can capture the actual background.")
             } catch {
                 guard captureRevision == revision else { return }
-                captureStatusLabel.stringValue = "Capture failed: \(error.localizedDescription)"
+                captureStatusLabel.stringValue = String(localized: "Capture failed: \(error.localizedDescription)")
             }
         }
     }
@@ -413,7 +414,7 @@ public final class PeelDemoView: NSView {
 
     @objc private func windowSelectionChanged() {
         invalidateCapture()
-        captureStatusLabel.stringValue = "Window selection changed. Capture this selection before using desktop mode."
+        captureStatusLabel.stringValue = String(localized: "Window selection changed. Capture this selection before using desktop mode.")
     }
 
     @objc private func showDemo() {
@@ -431,10 +432,10 @@ public final class PeelDemoView: NSView {
                 front: makeSampleImage(underneath: false),
                 underneath: makeSampleImage(underneath: true)
             )
-            captureStatusLabel.stringValue = "Sample pair ready. Drag a corner to reveal the lower sample."
+            captureStatusLabel.stringValue = String(localized: "Sample pair ready. Drag a corner to reveal the lower sample.")
             metalView.draw()
         } catch {
-            captureStatusLabel.stringValue = "Unable to restore demo: \(error.localizedDescription)"
+            captureStatusLabel.stringValue = String(localized: "Unable to restore demo: \(error.localizedDescription)")
         }
     }
 
@@ -447,7 +448,7 @@ public final class PeelDemoView: NSView {
     private func updateDesktopAvailability() {
         desktopButton.isEnabled = true
         desktopButton.title = PeelDesktopController.shared.isEnabled
-            ? "Disable Desktop" : "Enable Desktop"
+            ? String(localized: "Disable Desktop") : String(localized: "Enable Desktop")
     }
 
     @objc private func toggleCurlPreview() {
@@ -470,14 +471,14 @@ public final class PeelDemoView: NSView {
             lift: sin(.pi / 4)
         )
         previewingCurl = true
-        previewButton.title = "Resume"
+        previewButton.title = String(localized: "Resume")
         metalView.draw()
     }
 
     private func stopCurlPreview() {
         guard previewingCurl else { return }
         previewingCurl = false
-        previewButton.title = "Preview 50%"
+        previewButton.title = String(localized: "Preview 50%")
         renderer.pose = gestureMachine.pose
         metalView.draw()
     }
@@ -542,10 +543,10 @@ public final class PeelDemoView: NSView {
                     let underneath = automaticUnderlays[corner]
                     try renderer.showSnapshots(front: capturedFrontImage, underneath: underneath)
                     captureStatusLabel.stringValue = underneath == nil
-                        ? "No actual lower window at this corner."
-                        : "Actual lower window ready for this corner."
+                        ? String(localized: "No actual lower window at this corner.")
+                        : String(localized: "Actual lower window ready for this corner.")
                 } catch {
-                    captureStatusLabel.stringValue = "Unable to show this corner: \(error.localizedDescription)"
+                    captureStatusLabel.stringValue = String(localized: "Unable to show this corner: \(error.localizedDescription)")
                 }
             }
             stopSettlementTimer()
@@ -605,13 +606,14 @@ public final class PeelDemoView: NSView {
     private func updatePresentation() {
         renderer.pose = gestureMachine.pose
         metalView.draw()
-        statusLabel.stringValue = String(
-            format: "phase: %@   peel: %.2f   last drag: %.2f   frame: %.1f ms",
-            String(describing: gestureMachine.phase),
-            gestureMachine.pose.progress,
-            lastDragPeakProgress,
-            renderer.lastFrameDuration * 1_000
-        )
+        let phase = switch gestureMachine.phase {
+        case .idle: String(localized: "Idle")
+        case .dragging: String(localized: "Dragging")
+        case .settling: String(localized: "Returning")
+        }
+        let progress = gestureMachine.pose.progress.formatted(.number.precision(.fractionLength(2)))
+        let peak = lastDragPeakProgress.formatted(.number.precision(.fractionLength(2)))
+        let frameTime = (renderer.lastFrameDuration * 1_000).formatted(.number.precision(.fractionLength(1)))
+        statusLabel.stringValue = String(localized: "\(phase) · Peel: \(progress) · Last drag: \(peak) · Frame: \(frameTime) ms")
     }
 }
-

@@ -1,16 +1,18 @@
 # Peel Window 使用说明
 
-[English](USER_GUIDE_EN.md) · [下载页面](https://github.com/fyyyaug/peel-window/releases/tag/v0.1.0-beta.1)
+[English](USER_GUIDE_EN.md) · [下载页面](https://github.com/fyyyaug/peel-window/releases/tag/v0.1.0-beta.2)
 
 Peel Window 可以像翻书一样临时卷起窗口，查看它背后的画面；松开鼠标后，窗口会回弹恢复。
 
 ## 1. 下载与安装
 
 - 支持 Apple 芯片 Mac（M 系列），macOS 14 或更高版本。
-- 下载 [PeelWindow-0.1.0-macos-arm64.dmg](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.1/PeelWindow-0.1.0-macos-arm64.dmg)。只需这一个文件，不需要下载 Source code、Xcode 或其他依赖。
+- 下载 [PeelWindow-0.1.0-macos-arm64.dmg](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.2/PeelWindow-0.1.0-macos-arm64.dmg)。只需这一个文件，不需要下载 Source code、Xcode 或其他依赖。
 - 打开 DMG，将 `PeelWindow.app` 拖入 `Applications`（应用程序）。然后从“应用程序”启动 PeelWindow。
 
 当前测试版未经过 Apple 公证。若首次启动被拦截，请在尝试打开后进入“系统设置 → 隐私与安全性”，找到 PeelWindow 的提示并选择“仍要打开”。只批准你信任来源的应用。
+
+Peel Window 会使用 macOS 语言偏好列表中第一个受支持的语言；没有匹配时使用英语。可在“系统设置 → 通用 → 语言与地区 → 应用程序”中单独设置 Peel Window 的语言，然后重新打开应用。
 
 ## 2. 首次使用：允许屏幕录制
 
@@ -29,7 +31,7 @@ Peel Window 可以像翻书一样临时卷起窗口，查看它背后的画面�
 4. 从标记中央按住鼠标，向窗口内部拖动。左右、上下移动可以改变卷曲方向和翻开范围。
 5. 松开鼠标，窗口回弹恢复。将鼠标移开角落后再靠近，即可再次翻页。
 
-切换应用、移动窗口或关闭某个窗口不会关闭总开关。无需为每个应用手动选择窗口或点击 Capture。
+切换应用、移动窗口或关闭某个窗口不会关闭总开关。无需为每个应用手动选择窗口或点击“捕获”。
 
 如果第一次画面还在准备中，标记仍可先显示；按住并拖动时，程序会在画面准备好后接上操作。提前松手会取消这次操作。
 
@@ -37,7 +39,7 @@ Peel Window 可以像翻书一样临时卷起窗口，查看它背后的画面�
 
 | 设置 | 用途 |
 | --- | --- |
-| 桌面持续翻页 | 开启或关闭桌面翻页。也可在 PeelWindow 应用菜单中切换 Enable Desktop Peeling。 |
+| 桌面持续翻页 | 开启或关闭桌面翻页。也可在 PeelWindow 应用菜单中切换“启用桌面翻页”。 |
 | 四个角落 | 分别启用左上、右上、左下、右下角，至少保留一个。设置决定可以从哪里开始拖动。 |
 | 最大翻开范围 | 10%–100%，限制能够翻开的最大区域。 |
 | 回弹力度 | 0.25×–2×，控制松手后的回弹手感。 |
@@ -47,7 +49,7 @@ Peel Window 可以像翻书一样临时卷起窗口，查看它背后的画面�
 
 ## 5. “提示标记”页面
 
-也可以通过“PeelWindow → Settings…”或 `⌘,` 打开标记设置。
+也可以通过“PeelWindow → 设置…”或 `⌘,` 打开标记设置。
 
 | 设置 | 范围或说明 |
 | --- | --- |
@@ -64,16 +66,16 @@ Peel Window 可以像翻书一样临时卷起窗口，查看它背后的画面�
 
 ## 6. “翻页预览”页面
 
-- **Sample Pair**：使用内置样本，不需要捕获真实窗口。
-- **Preview 50%**：显示静态翻页效果；点击 Resume 返回交互状态。
-- **Find Windows → 选择窗口 → Capture**：在应用内预览真实窗口快照。
-- **Auto-detect actual window below**：为预览自动寻找角落下方的窗口；也可手动选择下层窗口。
+- **示例窗口**：使用内置样本，不需要捕获真实窗口。
+- **预览 50%**：显示静态翻页效果；点击“继续”返回交互状态。
+- **查找窗口 → 选择窗口 → 捕获**：在应用内预览真实窗口快照。
+- **自动检测实际下层窗口**：为预览自动寻找角落下方的窗口；也可手动选择下层窗口。
 
 这些手动捕获操作用于预览。日常桌面翻页只需要开启总开关。
 
 ## 7. 暂停与退出
 
-关闭主页面的“桌面持续翻页”，或取消应用菜单中的 Enable Desktop Peeling，即可停止桌面翻页。关闭主设置窗口不等于退出后台应用。要完全退出，请使用“PeelWindow → Quit PeelWindow”。
+关闭主页面的“桌面持续翻页”，或取消应用菜单中的“启用桌面翻页”，即可停止桌面翻页。关闭主设置窗口不等于退出后台应用。要完全退出，请使用“PeelWindow → 退出 PeelWindow”。
 
 ## 8. 常见问题与当前限制
 

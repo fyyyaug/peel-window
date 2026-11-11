@@ -39,8 +39,8 @@ public final class PeelWindowCatalog {
         return candidates.map { window in
             PeelWindowChoice(
                 id: window.windowID,
-                applicationName: window.owningApplication?.applicationName ?? "Unknown App",
-                title: window.title.flatMap { $0.isEmpty ? nil : $0 } ?? "Untitled Window",
+                applicationName: window.owningApplication?.applicationName ?? String(localized: "Unknown App"),
+                title: window.title.flatMap { $0.isEmpty ? nil : $0 } ?? String(localized: "Untitled Window"),
                 frame: window.frame
             )
         }

@@ -14,10 +14,10 @@ public enum PeelDesktopError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .noMainDisplay: "No main display is available."
-        case .unsupportedWindowPosition: "Desktop peel currently supports windows fully on the main display."
-        case .rendererUnavailable: "The desktop renderer could not start."
-        case .noEnabledCorner: "Enable at least one corner for desktop peeling."
+        case .noMainDisplay: String(localized: "No main display is available.")
+        case .unsupportedWindowPosition: String(localized: "Desktop peel currently supports windows fully on the main display.")
+        case .rendererUnavailable: String(localized: "The desktop renderer could not start.")
+        case .noEnabledCorner: String(localized: "Enable at least one corner for desktop peeling.")
         }
     }
 }
@@ -178,7 +178,7 @@ public final class PeelDesktopSession {
                     self.prepareBackground()
                 } else if self.sourceWasActive &&
                     NSWorkspace.shared.frontmostApplication?.processIdentifier != self.sourceProcessID {
-                    self.stop(reason: "Desktop peel stopped because another app became active.")
+                    self.stop(reason: String(localized: "Desktop peel stopped because another app became active."))
                 }
             }
         }
@@ -197,7 +197,7 @@ public final class PeelDesktopSession {
         )
     }
 
-    public func stop(reason: String = "Desktop peel stopped.") {
+    public func stop(reason: String = String(localized: "Desktop peel stopped.")) {
         guard !isStopped else { return }
         isStopped = true
         settlementTimer?.invalidate()
@@ -275,7 +275,7 @@ public final class PeelDesktopSession {
                 sourceWasActive = true
                 prepareBackground()
             } else if ProcessInfo.processInfo.systemUptime >= activationDeadline {
-                stop(reason: "Desktop peel timed out. Bring the selected window forward, then try again.")
+                stop(reason: String(localized: "Desktop peel timed out. Bring the selected window forward, then try again."))
                 return
             }
         }
@@ -283,14 +283,14 @@ public final class PeelDesktopSession {
             prepareBackground()
         }
         guard let current = Self.currentWindowInfo(for: sourceWindowID)?.frame else {
-            stop(reason: "Desktop peel stopped because the selected window is unavailable.")
+            stop(reason: String(localized: "Desktop peel stopped because the selected window is unavailable."))
             return
         }
         if isReady && (abs(current.minX - trackedSystemFrame.minX) > 2 ||
             abs(current.minY - trackedSystemFrame.minY) > 2 ||
             abs(current.width - trackedSystemFrame.width) > 2 ||
             abs(current.height - trackedSystemFrame.height) > 2) {
-            stop(reason: "Desktop peel stopped because the selected window moved or resized.")
+            stop(reason: String(localized: "Desktop peel stopped because the selected window moved or resized."))
         } else if !isReady && !isPreparingBackground {
             alignPanels(to: current)
         }
@@ -299,7 +299,7 @@ public final class PeelDesktopSession {
     private func prepareBackground() {
         guard sourceWasActive, !isPreparingBackground, !isReady, !isStopped else { return }
         guard let current = Self.currentWindowInfo(for: sourceWindowID)?.frame else {
-            stop(reason: "Desktop peel stopped because the selected window is unavailable.")
+            stop(reason: String(localized: "Desktop peel stopped because the selected window is unavailable."))
             return
         }
         alignPanels(to: current)
@@ -314,7 +314,7 @@ public final class PeelDesktopSession {
                 )
                 guard !isStopped else { return }
                 guard let latest = Self.currentWindowInfo(for: sourceWindowID)?.frame else {
-                    stop(reason: "Desktop peel stopped because the selected window is unavailable.")
+                    stop(reason: String(localized: "Desktop peel stopped because the selected window is unavailable."))
                     return
                 }
                 if latest != current {
@@ -342,7 +342,7 @@ public final class PeelDesktopSession {
                 isPreparingBackground = false
                 onWaitingForWindow?()
             } catch {
-                stop(reason: "Desktop peel stopped because the background capture failed: \(error.localizedDescription)")
+                stop(reason: String(localized: "Desktop peel stopped because the background capture failed: \(error.localizedDescription)"))
             }
         }
     }
