@@ -5,7 +5,7 @@
 The guides cover installation, screen recording permission, desktop peeling,
 and customization of corner markers and hover timing.
 
-[**Download Peel Window for Apple silicon Mac**](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.2/PeelWindow-0.1.0-macos-arm64.dmg)
+[**Download Peel Window for Apple silicon Mac**](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.3/PeelWindow-0.1.0-macos-arm64.dmg)
 
 Download this single DMG, open it, and drag `PeelWindow.app` into Applications.
 No source code, Xcode, or additional dependencies are required. Supports Apple
@@ -19,7 +19,7 @@ The app follows your macOS language preferences. It supports English, Simplified
 Chinese, Traditional Chinese, Japanese, French, Spanish, and German, with
 English as the fallback.
 
-[Release notes and downloads](https://github.com/fyyyaug/peel-window/releases/tag/v0.1.0-beta.2)
+[Release notes and downloads](https://github.com/fyyyaug/peel-window/releases/tag/v0.1.0-beta.3)
 
 Peel Window is a native macOS interaction prototype for temporarily revealing
 an obscured window by lifting a corner of the window above it.
