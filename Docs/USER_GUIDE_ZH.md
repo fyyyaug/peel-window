@@ -7,7 +7,7 @@ Peel Window 可以像翻书一样临时卷起窗口，查看它背后的画面�
 ## 1. 下载与安装
 
 - 支持 Apple 芯片 Mac（M 系列），macOS 14 或更高版本。
-- 下载 [PeelWindow-0.1.0-macos-arm64.dmg](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.3/PeelWindow-0.1.0-macos-arm64.dmg)。只需这一个文件，不需要下载 Source code、Xcode 或其他依赖。
+- 下载 [PeelWindow-0.1.0-beta.3-macos-arm64.dmg](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.3/PeelWindow-0.1.0-beta.3-macos-arm64.dmg)。只需这一个文件，不需要下载 Source code、Xcode 或其他依赖。
 - 打开 DMG，将 `PeelWindow.app` 拖入 `Applications`（应用程序）。然后从“应用程序”启动 PeelWindow。
 
 当前测试版未经过 Apple 公证。若首次启动被拦截，请在尝试打开后进入“系统设置 → 隐私与安全性”，找到 PeelWindow 的提示并选择“仍要打开”。只批准你信任来源的应用。

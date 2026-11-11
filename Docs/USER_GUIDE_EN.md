@@ -7,7 +7,7 @@ Peel Window temporarily curls a window like a book page, revealing the view behi
 ## 1. Download and install
 
 - Requires an Apple silicon Mac (M series) running macOS 14 or later.
-- Download [PeelWindow-0.1.0-macos-arm64.dmg](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.3/PeelWindow-0.1.0-macos-arm64.dmg). This is the only download required. You do not need Source code, Xcode, or additional dependencies.
+- Download [PeelWindow-0.1.0-beta.3-macos-arm64.dmg](https://github.com/fyyyaug/peel-window/releases/download/v0.1.0-beta.3/PeelWindow-0.1.0-beta.3-macos-arm64.dmg). This is the only download required. You do not need Source code, Xcode, or additional dependencies.
 - Open the DMG, drag `PeelWindow.app` into `Applications`, then launch it from Applications.
 
 This beta is not notarized by Apple. If macOS blocks the first launch, first attempt to open it, then go to **System Settings → Privacy & Security** and choose **Open Anyway** for PeelWindow. Only approve an application whose source you trust.
